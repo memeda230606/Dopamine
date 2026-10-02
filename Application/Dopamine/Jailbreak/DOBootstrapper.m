@@ -8,7 +8,7 @@
 #import "DOBootstrapper.h"
 #import "DOBootstrapper+zstd.h"
 #import "DOEnvironmentManager.h"
-#import "DOUIManager.h"
+#import "DOCore.h"
 #import <libjailbreak/info.h>
 #import <libjailbreak/util.h>
 #import <libjailbreak/jbclient_xpc.h>
@@ -263,7 +263,7 @@ NSString *const bootstrapErrorDomain = @"BootstrapErrorDomain";
 
 - (void)prepareBootstrapWithCompletion:(void (^)(NSError *))completion
 {
-    [[DOUIManager sharedInstance] sendLog:@"Updating BaseBin" debug:NO];
+    [[DOCoreContext sharedContext] sendLog:@"Updating BaseBin" debug:NO];
 
     // Ensure /private/preboot is mounted writable (Not writable by default on iOS <=15)
     NSError *error = [self ensurePrivatePrebootIsWritable];
@@ -378,7 +378,7 @@ NSString *const bootstrapErrorDomain = @"BootstrapErrorDomain";
             }
         }
     }
-    error = [self extractTar:[[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:@"basebin.tar"] toPath:JBROOT_PATH(@"/")];
+    error = [self extractTar:[[DOCoreContext sharedContext] resourcePath:@"basebin.tar"] toPath:JBROOT_PATH(@"/")];
     if (error) {
         completion(error);
         return;
@@ -445,13 +445,13 @@ NSString *const bootstrapErrorDomain = @"BootstrapErrorDomain";
             [self extractBootstrap:path withCompletion:bootstrapFinishedCompletion];
         };*/
         
-        [[DOUIManager sharedInstance] sendLog:@"Extracting Bootstrap" debug:NO];
+        [[DOCoreContext sharedContext] sendLog:@"Extracting Bootstrap" debug:NO];
 
-        NSString *bootstrapZstdPath = [NSString stringWithFormat:@"%@/bootstrap_%@.tar.zst", [NSBundle mainBundle].bundlePath, [self bootstrapVersion]];
+        NSString *bootstrapZstdPath = [NSString stringWithFormat:@"%@/bootstrap_%@.tar.zst", [DOCoreContext sharedContext].host.resourceDirectory, [self bootstrapVersion]];
         [self extractBootstrap:bootstrapZstdPath withCompletion:bootstrapFinishedCompletion];
 
         /*NSString *documentsCandidate = @"/var/mobile/Documents/bootstrap.tar.zstd";
-        NSString *bundleCandidate = [[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:@"bootstrap.tar.zstd"];
+        NSString *bundleCandidate = [[DOCoreContext sharedContext] resourcePath:@"bootstrap.tar.zstd"];
         // Check if the user provided a bootstrap
         if ([[NSFileManager defaultManager] fileExistsAtPath:documentsCandidate]) {
             bootstrapDownloadCompletion(documentsCandidate, nil);
@@ -460,7 +460,7 @@ NSString *const bootstrapErrorDomain = @"BootstrapErrorDomain";
             bootstrapDownloadCompletion(bundleCandidate, nil);
         }
         else {
-            [[DOUIManager sharedInstance] sendLog:@"Downloading Bootstrap" debug:NO];
+            [[DOCoreContext sharedContext] sendLog:@"Downloading Bootstrap" debug:NO];
             [self downloadBootstrapWithCompletion:bootstrapDownloadCompletion];
         }*/
     }
@@ -508,9 +508,9 @@ NSString *const bootstrapErrorDomain = @"BootstrapErrorDomain";
 
 - (NSError *)installPackageManagers
 {
-    NSArray *enabledPackageManagers = [[DOUIManager sharedInstance] enabledPackageManagers];
+    NSArray *enabledPackageManagers = [[DOCoreContext sharedContext].host packageManagers];
     for (NSDictionary *packageManagerDict in enabledPackageManagers) {
-        NSString *path = [[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:packageManagerDict[@"Package"]];
+        NSString *path = [[DOCoreContext sharedContext] resourcePath:packageManagerDict[@"Package"]];
         NSString *name = packageManagerDict[@"Display Name"];
         int r = [self installPackage:path];
         if (r != 0) {
@@ -535,7 +535,7 @@ NSString *const bootstrapErrorDomain = @"BootstrapErrorDomain";
 {
     // Initial setup on first jailbreak
     if ([[NSFileManager defaultManager] fileExistsAtPath:JBROOT_PATH(@"/prep_bootstrap.sh")]) {
-        [[DOUIManager sharedInstance] sendLog:@"Finalizing Bootstrap" debug:NO];
+        [[DOCoreContext sharedContext] sendLog:@"Finalizing Bootstrap" debug:NO];
         int r = exec_cmd_trusted(JBROOT_PATH("/bin/sh"), JBROOT_PATH("/prep_bootstrap.sh"), NULL);
         if (r != 0) {
             return [NSError errorWithDomain:bootstrapErrorDomain code:BootstrapErrorCodeFailedFinalising userInfo:@{NSLocalizedDescriptionKey : [NSString stringWithFormat:@"prep_bootstrap.sh returned %d\n", r]}];
@@ -554,22 +554,22 @@ NSString *const bootstrapErrorDomain = @"BootstrapErrorDomain";
     }
     
     if (shouldInstallLibroot || shouldInstallLibkrw || shouldInstallBasebinLink || shouldInstallLaunchctl) {
-        [[DOUIManager sharedInstance] sendLog:@"Updating Bundled Packages" debug:NO];
+        [[DOCoreContext sharedContext] sendLog:@"Updating Bundled Packages" debug:NO];
 
         if (shouldInstallLaunchctl) {
-            NSString *launchctlPath = [[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:@"launchctl_1_1.2.0_iphoneos-arm64.deb"];
+            NSString *launchctlPath = [[DOCoreContext sharedContext] resourcePath:@"launchctl_1_1.2.0_iphoneos-arm64.deb"];
             int r = [self installPackage:launchctlPath];
             if (r != 0) return [NSError errorWithDomain:bootstrapErrorDomain code:BootstrapErrorCodeFailedFinalising userInfo:@{NSLocalizedDescriptionKey : [NSString stringWithFormat:@"Failed to install launchctl: %d\n", r]}];
         }
 
         if (shouldInstallLibroot) {
-            NSString *librootPath = [[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:@"libroot.deb"];
+            NSString *librootPath = [[DOCoreContext sharedContext] resourcePath:@"libroot.deb"];
             int r = [self installPackage:librootPath];
             if (r != 0) return [NSError errorWithDomain:bootstrapErrorDomain code:BootstrapErrorCodeFailedFinalising userInfo:@{NSLocalizedDescriptionKey : [NSString stringWithFormat:@"Failed to install libroot: %d\n", r]}];
         }
         
         if (shouldInstallLibkrw) {
-            NSString *libkrwPath = [[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:@"libkrw-dopamine.deb"];
+            NSString *libkrwPath = [[DOCoreContext sharedContext] resourcePath:@"libkrw-dopamine.deb"];
             int r = [self installPackage:libkrwPath];
             if (r != 0) return [NSError errorWithDomain:bootstrapErrorDomain code:BootstrapErrorCodeFailedFinalising userInfo:@{NSLocalizedDescriptionKey : [NSString stringWithFormat:@"Failed to install the libkrw plugin: %d\n", r]}];
         }
@@ -590,7 +590,7 @@ NSString *const bootstrapErrorDomain = @"BootstrapErrorDomain";
                 [[NSFileManager defaultManager] removeItemAtPath:JBROOT_PATH(@"/usr/bin/libjailbreak.dylib") error:nil];
             }
             
-            NSString *basebinLinkPath = [[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:@"basebin-link.deb"];
+            NSString *basebinLinkPath = [[DOCoreContext sharedContext] resourcePath:@"basebin-link.deb"];
             int r = [self installPackage:basebinLinkPath];
             if (r != 0) return [NSError errorWithDomain:bootstrapErrorDomain code:BootstrapErrorCodeFailedFinalising userInfo:@{NSLocalizedDescriptionKey : [NSString stringWithFormat:@"Failed to install basebin link: %d\n", r]}];
         }
@@ -616,7 +616,7 @@ NSString *const bootstrapErrorDomain = @"BootstrapErrorDomain";
         NSString *sizeString = [NSByteCountFormatter stringFromByteCount:totalBytesWritten countStyle:NSByteCountFormatterCountStyleFile];
         NSString *writtenBytesString = [NSByteCountFormatter stringFromByteCount:totalBytesExpectedToWrite countStyle:NSByteCountFormatterCountStyleFile];
         
-        [[DOUIManager sharedInstance] sendLog:[NSString stringWithFormat:@"Downloading Bootstrap (%@/%@)", sizeString, writtenBytesString] debug:NO update:YES];
+        [[DOCoreContext sharedContext] sendLog:[NSString stringWithFormat:@"Downloading Bootstrap (%@/%@)", sizeString, writtenBytesString] debug:NO update:YES];
     }
 }
 

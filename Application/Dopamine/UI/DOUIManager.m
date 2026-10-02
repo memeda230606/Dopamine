@@ -11,6 +11,7 @@
 #import "DOTheme.h"
 #import "NSString+Version.h"
 #import <pthread.h>
+#import <os/log.h>
 
 @implementation DOUIManager
 
@@ -207,12 +208,26 @@
 
 - (void)sendLog:(NSString*)log debug:(BOOL)debug update:(BOOL)update
 {
-    if (!self.logView || !log)
+    if (!log)
         return;
+
+    // Keep diagnostic output after an exploit exits the application. Unlike
+    // NSLog, os_log does not feed stderr back into our capture pipe.
+    static os_log_t jailbreakLog;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        jailbreakLog = os_log_create("com.opa334.Dopamine", "Jailbreak");
+    });
+    os_log_with_type(jailbreakLog, OS_LOG_TYPE_DEFAULT, "%{public}s", log.UTF8String);
 
     [_logLock lock];
 
     [self.logRecord addObject:log];
+
+    if (!self.logView) {
+        [_logLock unlock];
+        return;
+    }
 
     BOOL isDebug = self.logView.class == DODebugLogView.class;
     if (debug && !isDebug) {
@@ -259,27 +274,28 @@
 
 - (void)observeFileDescriptor:(int)fd withCallback:(void (^)(char *line))callbackBlock
 {
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        int stdout_pipe[2];
-        int stdout_orig[2];
-        if (pipe(stdout_pipe) != 0 || pipe(stdout_orig) != 0) {
-            return;
-        }
-
-        dup2(fd, stdout_orig[1]);
-        close(stdout_orig[0]);
-        
-        dup2(stdout_pipe[1], fd);
+    // Install the pipe before returning so early exploit failures are captured.
+    int stdout_pipe[2];
+    if (pipe(stdout_pipe) != 0) return;
+    int originalFD = dup(fd);
+    if (originalFD < 0 || dup2(stdout_pipe[1], fd) < 0) {
+        if (originalFD >= 0) close(originalFD);
+        close(stdout_pipe[0]);
         close(stdout_pipe[1]);
-        
+        return;
+    }
+    close(stdout_pipe[1]);
+    int readFD = stdout_pipe[0];
+
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         char cur = 0;
         char line[1024];
         int line_index = 0;
         ssize_t bytes_read;
 
-        while ((bytes_read = read(stdout_pipe[0], &cur, sizeof(cur))) > 0) {
+        while ((bytes_read = read(readFD, &cur, sizeof(cur))) > 0) {
             @autoreleasepool {
-                write(stdout_orig[1], &cur, bytes_read);
+                write(originalFD, &cur, bytes_read);
 
                 if (cur == '\n') {
                     line[line_index] = '\0';
@@ -292,12 +308,16 @@
                 }
             }
         }
-        close(stdout_pipe[0]);
+        close(readFD);
+        close(originalFD);
     });
 }
 
 - (void)startLogCapture
 {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+
     [self observeFileDescriptor:STDOUT_FILENO withCallback:^(char *line) {
         NSString *str = [NSString stringWithUTF8String:line];
         [self sendLog:str debug:YES];

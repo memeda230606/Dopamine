@@ -9,6 +9,7 @@
 #import "DOUIManager.h"
 #import "DOEnvironmentManager.h"
 #import "DOJailbreaker.h"
+#import "DOAppCoreHost.h"
 #import "DOGlobalAppearance.h"
 #import "DOActionMenuButton.h"
 #import "DOUpdateViewController.h"
@@ -75,7 +76,11 @@
 
     //Header
     DOHeaderView *headerView = [[DOHeaderView alloc] initWithImage: [UIImage imageNamed:@"Dopamine"] subtitles: @[
+#if DOPAMINE_NO_REBOOT_TEST
+        [DOGlobalAppearance mainSubtitleString:[NSString stringWithFormat:@"核心解耦测试版 · build %@", NSBundle.mainBundle.infoDictionary[@"CFBundleVersion"]]],
+#else
         [DOGlobalAppearance mainSubtitleString:[[DOEnvironmentManager sharedManager] versionSupportString]],
+#endif
         [DOGlobalAppearance secondarySubtitleString:DOLocalizedString(@"Credits_Made_By")],
     ]];
     
@@ -239,10 +244,13 @@
             self.hideHomeIndicator = YES;
         });
 
-        NSError *error;
-        BOOL didRemove = NO;
-        BOOL showLogs = YES;
-        [jailbreaker runWithError:&error didRemoveJailbreak:&didRemove showLogs:&showLogs];
+        DOResult *coreResult = [jailbreaker run];
+        NSError *error = coreResult.error;
+        BOOL didRemove = coreResult.didRemoveJailbreak;
+        BOOL showLogs = coreResult.showLogs;
+#if DOPAMINE_NO_REBOOT_TEST
+        NSString *testSummary = (!error && !didRemove) ? [DOAppCoreHost summaryForNoRebootReport:[jailbreaker finishNoRebootTest]] : nil;
+#endif
         dispatch_async(dispatch_get_main_queue(), ^{
             if (error && showLogs) {
                 [[DOUIManager sharedInstance] sendLog:[NSString stringWithFormat:@"Jailbreak failed with error: %@", error] debug:NO];
@@ -268,9 +276,16 @@
             else {
                 // No errors
                 [[DOUIManager sharedInstance] completeJailbreak];
+#if DOPAMINE_NO_REBOOT_TEST
+                self.hideHomeIndicator = NO;
+                UIAlertController *result = [UIAlertController alertControllerWithTitle:@"不重启测试完成" message:testSummary preferredStyle:UIAlertControllerStyleAlert];
+                [result addAction:[UIAlertAction actionWithTitle:@"完成" style:UIAlertActionStyleDefault handler:nil]];
+                [self presentViewController:result animated:YES completion:nil];
+#else
                 [self fadeToBlack: ^{
                     [jailbreaker finalize];
                 }];
+#endif
             }
         });
         [self.jailbreakBtn unlockMutex];

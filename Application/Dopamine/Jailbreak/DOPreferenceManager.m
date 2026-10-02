@@ -40,6 +40,11 @@
     [_preferences writeToFile:_preferencesPath atomically:YES];
 }
 
+- (NSDictionary<NSString *, id> *)settingsSnapshot
+{
+    return [_preferences copy];
+}
+
 - (id)preferenceValueForKey:(NSString *)key
 {
     return [_preferences objectForKey:key];

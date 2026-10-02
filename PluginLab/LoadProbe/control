@@ -1,0 +1,9 @@
+Package: com.mmd.pluginlab.loadprobe
+Name: MMDLabLoad
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: 独立动态库加载检测
+Maintainer: Local Research
+Author: Local Research
+Section: Tweaks
+Depends: firmware (>= 15.0)

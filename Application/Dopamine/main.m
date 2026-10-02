@@ -7,12 +7,15 @@
 
 #import <UIKit/UIKit.h>
 #import "DOAppDelegate.h"
+#import "DOAppCoreHost.h"
+#import "DOCoreDiagnostics.h"
 
 #import "DOEnvironmentManager.h"
 #import <libjailbreak/info.h>
 #import <libjailbreak/jbclient_xpc.h>
 
 int main(int argc, char * argv[]) {
+    [DOAppCoreHost install];
     if (argc >= 3) {
         if (!strcmp(argv[1], "trollstore")) {
             if (!strcmp(argv[2], "delete-bootstrap")) {
@@ -39,6 +42,13 @@ int main(int argc, char * argv[]) {
         setenv("TERM", "xterm-256color", 1);
     }
     
+    if ([NSProcessInfo.processInfo.environment[@"DOPAMINE_CORE_CHECK"] isEqual:@"1"]) {
+        NSDictionary *report = [DOCoreDiagnostics environmentReport];
+        NSData *data = [NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
+        NSString *json = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        [[DOCoreContext sharedContext] sendLog:[@"[CORE_DIAGNOSTICS] " stringByAppendingString:json] debug:NO];
+    }
+
     NSString * appDelegateClassName;
     @autoreleasepool {
         // Setup code that might create autoreleased objects goes here.

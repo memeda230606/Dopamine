@@ -14,6 +14,7 @@
 #include <copyfile.h>
 
 #import "krw-corellium.h"
+#import "DOCommandLineCoreHost.h"
 
 #import <DOJailbreaker.h>
 #import <DOBootstrapper.h>
@@ -418,6 +419,7 @@ void activate_dopamine(void)
 
 int main(int argc, char* argv[])
 {
+	[DOCommandLineCoreHost install];
 	gJb = [[DOJailbreaker alloc] init];
 
 	if (argc >= 2) {

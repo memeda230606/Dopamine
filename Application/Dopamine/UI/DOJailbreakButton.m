@@ -47,7 +47,7 @@
         
     self.didExpand = TRUE;
 
-    UIWindow *window = [[UIApplication sharedApplication] keyWindow];
+    UIWindow *window = self.window;
 
     float topPadding = (window.frame.size.height * (1 - 0.74));
     topPadding += 35;
@@ -86,7 +86,7 @@
 
 - (void)setupLog: (float)topPadding
 {
-    UIWindow *window = [[UIApplication sharedApplication] keyWindow];
+    UIWindow *window = self.window;
 
     if ([[DOUIManager sharedInstance] isDebug])
         self.logView = [[DODebugLogView alloc] init];
@@ -110,7 +110,7 @@
 
 - (void)setupPackageManagerPicker: (float)topPadding
 {
-    UIWindow *window = [[UIApplication sharedApplication] keyWindow];
+    UIWindow *window = self.window;
 
     if ([[DOUIManager sharedInstance] enabledPackageManagerKeys].count > 0)
         return;
@@ -142,7 +142,7 @@
 
 - (void)setupTitle
 {
-    UIWindow *window = [[UIApplication sharedApplication] keyWindow];
+    UIWindow *window = self.window;
 
     UILabel *titleLabel = [[UILabel alloc] init];
     titleLabel.translatesAutoresizingMaskIntoConstraints = NO;

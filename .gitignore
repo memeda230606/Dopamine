@@ -1,8 +1,17 @@
 .DS_Store
 /.build
+# 本地设备诊断、会话记忆与生成缓存不发布到仓库。
+/diagnostics/
+/easy-memory/
+__pycache__/
+*.pyc
 /*.xcodeproj
 xcuserdata/
 xcshareddata/
+!Application/Dopamine.xcodeproj/xcshareddata/
+Application/Dopamine.xcodeproj/xcshareddata/**
+!Application/Dopamine.xcodeproj/xcshareddata/xcschemes/
+!Application/Dopamine.xcodeproj/xcshareddata/xcschemes/DopamineCore.xcscheme
 DerivedData/
 .swiftpm/xcode/
 /Package.resolved

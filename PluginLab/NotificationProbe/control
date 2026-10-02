@@ -1,0 +1,9 @@
+Package: com.mmd.pluginlab.notificationprobe
+Name: MMDLabNotification
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: 进程内通知回调测试
+Maintainer: Local Research
+Author: Local Research
+Section: Tweaks
+Depends: firmware (>= 15.0)

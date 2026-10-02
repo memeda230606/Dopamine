@@ -1,0 +1,6 @@
+build/
+.theos/
+packages/
+**/.theos/
+**/packages/
+__pycache__/

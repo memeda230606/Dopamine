@@ -8,8 +8,7 @@
 #import "DOJailbreaker.h"
 #import "DOEnvironmentManager.h"
 #import "DOExploitManager.h"
-#import "DOUIManager.h"
-#import "DOPreferenceManager.h"
+#import "DOCore.h"
 #import <sys/stat.h>
 #import <compression.h>
 #import <xpf/xpf.h>
@@ -36,6 +35,14 @@
 #import "spawn.h"
 #import "clock_alarm.h"
 #import <IOSurface/IOSurfaceRef.h>
+#if DOPAMINE_NO_REBOOT_TEST
+#import <sys/sysctl.h>
+#import <sys/wait.h>
+#import <mach-o/loader.h>
+#import <fcntl.h>
+#import <signal.h>
+#import <crt_externs.h>
+#endif
 int posix_spawnattr_set_registered_ports_np(posix_spawnattr_t * __restrict attr, mach_port_t portarray[], uint32_t count);
 
 #define kCFPreferencesNoContainer CFSTR("kCFPreferencesNoContainer")
@@ -64,7 +71,160 @@ typedef NS_ENUM(NSInteger, JBErrorCode) {
     JBErrorCodeFailedDuplicateApps           = -14,
 };
 
+@interface DOJailbreaker ()
+@property (nonatomic, strong) DOResult *lastResult;
+@property (nonatomic) BOOL finalized;
+#if DOPAMINE_NO_REBOOT_TEST
+@property (nonatomic, strong) NSDictionary *noRebootBaseline;
+@property (nonatomic, copy) NSString *noRebootReportPath;
+#endif
+@end
+
+#if DOPAMINE_NO_REBOOT_TEST
+
+// Use the same ordinary spawn before and after jailbreaking, without a persona
+// override or an additional trust operation. Root alone is not proof of a jailbreak.
+static NSDictionary *DONoRebootCommandProbe(void)
+{
+    int fds[2];
+    if (pipe(fds) != 0) return @{@"pipe_errno": @(errno)};
+    fcntl(fds[0], F_SETFL, O_NONBLOCK);
+    posix_spawn_file_actions_t actions;
+    posix_spawn_file_actions_init(&actions);
+    posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
+    posix_spawn_file_actions_adddup2(&actions, fds[1], STDERR_FILENO);
+    posix_spawn_file_actions_addclose(&actions, fds[0]);
+    posix_spawn_file_actions_addclose(&actions, fds[1]);
+    char *argv[] = {"/var/jb/usr/bin/id", "-u", NULL};
+    pid_t child = 0;
+    int spawnError = posix_spawn(&child, argv[0], &actions, NULL, argv, *_NSGetEnviron());
+    posix_spawn_file_actions_destroy(&actions);
+    close(fds[1]);
+    NSMutableDictionary *result = [@{@"spawn_error": @(spawnError)} mutableCopy];
+    if (spawnError == 0) {
+        NSMutableData *output = [NSMutableData data];
+        int status = 0;
+        BOOL finished = NO;
+        NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + 5;
+        while (YES) {
+            char buf[256];
+            ssize_t count;
+            while ((count = read(fds[0], buf, sizeof(buf))) > 0) {
+                if (output.length < 4096) [output appendBytes:buf length:(NSUInteger)count];
+            }
+            if (finished) break;
+            pid_t waited = waitpid(child, &status, WNOHANG);
+            if (waited == child) {
+                finished = YES;
+                continue; // Drain the final output after the child has exited.
+            }
+            if (waited < 0 && errno != EINTR) {
+                result[@"wait_errno"] = @(errno);
+                break;
+            }
+            if (NSProcessInfo.processInfo.systemUptime >= deadline) {
+                result[@"timed_out"] = @YES;
+                kill(child, SIGKILL);
+                while (waitpid(child, &status, 0) < 0 && errno == EINTR) {}
+                break;
+            }
+            usleep(10000);
+        }
+        result[@"output"] = [[NSString alloc] initWithData:output encoding:NSUTF8StringEncoding] ?: @"";
+        if (finished && WIFEXITED(status)) result[@"exit_code"] = @(WEXITSTATUS(status));
+        if (finished && WIFSIGNALED(status)) result[@"signal"] = @(WTERMSIG(status));
+    }
+    close(fds[0]);
+    return result;
+}
+
+static NSDictionary *DONoRebootSnapshot(void)
+{
+    NSMutableDictionary *snapshot = [@{@"pid": @(getpid()), @"uid": @(getuid()),
+        @"euid": @(geteuid()), @"uptime": @(NSProcessInfo.processInfo.systemUptime)} mutableCopy];
+    char uuid[128] = {0};
+    size_t size = sizeof(uuid);
+    if (sysctlbyname("kern.bootsessionuuid", uuid, &size, NULL, 0) == 0)
+        snapshot[@"boot_uuid"] = @(uuid);
+    else snapshot[@"boot_uuid_errno"] = @(errno);
+    struct timeval bootTime = {0};
+    size = sizeof(bootTime);
+    if (sysctlbyname("kern.boottime", &bootTime, &size, NULL, 0) == 0)
+        snapshot[@"boot_time"] = @((long long)bootTime.tv_sec);
+
+    int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
+    size = 0;
+    if (sysctl(mib, 4, NULL, &size, NULL, 0) == 0) {
+        size += 32 * sizeof(struct kinfo_proc);
+        struct kinfo_proc *processes = calloc(1, size);
+        if (processes && sysctl(mib, 4, processes, &size, NULL, 0) == 0) {
+            for (size_t i = 0; i < size / sizeof(*processes); i++) {
+                if (strcmp(processes[i].kp_proc.p_comm, "SpringBoard") == 0) {
+                    struct timeval started = processes[i].kp_proc.p_starttime;
+                    snapshot[@"springboard"] = @{@"pid": @(processes[i].kp_proc.p_pid),
+                        @"start_sec": @((long long)started.tv_sec), @"start_usec": @(started.tv_usec)};
+                    break;
+                }
+            }
+        }
+        else snapshot[@"process_list_errno"] = @(errno);
+        free(processes);
+    }
+    else snapshot[@"process_list_errno"] = @(errno);
+
+    char *version = NULL;
+    snapshot[@"jbserver_responds"] = @(jbclient_dopamine_is_jailbroken(&version));
+    if (version) { snapshot[@"jbserver_version"] = @(version); free(version); }
+    BOOL canRead = kconstant(base) && (gPrimitives.kreadbuf || gPrimitives.physreadbuf);
+    snapshot[@"kernel_primitive_available"] = @(canRead);
+    if (canRead) {
+        uint32_t magic = 0;
+        int result = kreadbuf(kconstant(base), &magic, sizeof(magic));
+        snapshot[@"kernel_read_result"] = @(result);
+        snapshot[@"kernel_magic"] = [NSString stringWithFormat:@"0x%08x", magic];
+        snapshot[@"kernel_read_verified"] = @(result == 0 && magic == MH_MAGIC_64);
+    }
+    snapshot[@"id_command"] = DONoRebootCommandProbe();
+    return snapshot;
+}
+
+static void DONoRebootLog(NSString *phase, NSDictionary *value)
+{
+    NSData *json = [NSJSONSerialization dataWithJSONObject:value options:NSJSONWritingSortedKeys error:nil];
+    NSString *text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+    [[DOCoreContext sharedContext] sendLog:[NSString stringWithFormat:@"[NOREBOOT_TEST] %@ %@", phase, text] debug:NO];
+}
+#endif
+
 @implementation DOJailbreaker
+
+#if DOPAMINE_NO_REBOOT_TEST
+- (NSDictionary *)finishNoRebootTest
+{
+    NSDictionary *before = self.noRebootBaseline ?: @{};
+    NSDictionary *after = DONoRebootSnapshot();
+    DONoRebootLog(@"after", after);
+    BOOL sameBoot = before[@"boot_uuid"] && [before[@"boot_uuid"] isEqual:after[@"boot_uuid"]];
+    BOOL sameDesktop = before[@"springboard"] && [before[@"springboard"] isEqual:after[@"springboard"]];
+    NSDictionary *command = after[@"id_command"];
+    BOOL rootCommand = command[@"exit_code"] && [command[@"exit_code"] intValue] == 0 &&
+        [[command[@"output"] stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] isEqual:@"0"];
+    BOOL newServer = ![before[@"jbserver_responds"] boolValue] && [after[@"jbserver_responds"] boolValue];
+    BOOL coreVerified = newServer && [after[@"kernel_read_verified"] boolValue] && rootCommand;
+    NSDictionary *checks = @{@"same_kernel_boot": @(sameBoot), @"same_springboard": @(sameDesktop),
+        @"new_jbserver": @(newServer), @"root_command": @(rootCommand),
+        @"core_capabilities_verified": @(coreVerified), @"automatic_reboot_skipped": @YES};
+    DONoRebootLog(@"checks", checks);
+    NSDictionary *report = @{@"build": [DOCoreContext sharedContext].host.applicationBuild ?: @"",
+        @"before": before, @"after": after, @"checks": checks};
+    NSData *json = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:nil];
+    NSError *writeError = nil;
+    BOOL saved = [json writeToFile:self.noRebootReportPath options:NSDataWritingAtomic error:&writeError];
+    DONoRebootLog(@"report", @{@"saved": @(saved), @"path": self.noRebootReportPath ?: @"",
+        @"error": writeError.localizedDescription ?: @""});
+    return report;
+}
+#endif
 
 - (NSError *)gatherSystemInformation
 {
@@ -81,7 +241,7 @@ typedef NS_ENUM(NSInteger, JBErrorCode) {
         NSLog(@"TXM at %@", txmPath);
     }
     
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Patchfinding") debug:NO];
+    [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Patchfinding") debug:NO];
     
     int r = xpf_start_with_kernel_path(kernelPath.fileSystemRepresentation, sptmPath ? sptmPath.fileSystemRepresentation : NULL, txmPath ? txmPath.fileSystemRepresentation : NULL);
     if (r == 0) {
@@ -149,8 +309,8 @@ typedef NS_ENUM(NSInteger, JBErrorCode) {
 
     // Stash app identifier into jailbreakInfo
     // This will later allow launchdhook to figure out which process is the dopamine app
-    if ([NSBundle mainBundle].bundleIdentifier) {
-        gSystemInfo.jailbreakInfo.appIdentifier = strdup([NSBundle mainBundle].bundleIdentifier.UTF8String);
+    if ([DOCoreContext sharedContext].host.applicationIdentifier) {
+        gSystemInfo.jailbreakInfo.appIdentifier = strdup([DOCoreContext sharedContext].host.applicationIdentifier.UTF8String);
     }
 
     _systemInfoXdict = jbinfo_get_serialized();
@@ -191,7 +351,7 @@ typedef NS_ENUM(NSInteger, JBErrorCode) {
         }
     }
     
-    [[DOUIManager sharedInstance] sendLog:[NSString stringWithFormat:DOLocalizedString(@"Exploiting Kernel (%@)"), kernelExploit.name] debug:NO];
+    [[DOCoreContext sharedContext] sendLog:[NSString stringWithFormat:DOTranslate(@"Exploiting Kernel (%@)"), kernelExploit.name] debug:NO];
     if ([kernelExploit load] != 0) return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedLoadingExploit userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"Failed to load kernel exploit: %s", dlerror()]}];
     if ([kernelExploit run] != 0) return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedExploitation userInfo:@{NSLocalizedDescriptionKey:@"Failed to exploit kernel"}];
     
@@ -200,7 +360,7 @@ typedef NS_ENUM(NSInteger, JBErrorCode) {
     libjailbreak_IOSurface_primitives_init();
     
     if (pacBypass) {
-        [[DOUIManager sharedInstance] sendLog:[NSString stringWithFormat:DOLocalizedString(@"Bypassing PAC (%@)"), pacBypass.name] debug:NO];
+        [[DOCoreContext sharedContext] sendLog:[NSString stringWithFormat:DOTranslate(@"Bypassing PAC (%@)"), pacBypass.name] debug:NO];
         if ([pacBypass load] != 0) {[kernelExploit cleanup]; return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedLoadingExploit userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"Failed to load PAC bypass: %s", dlerror()]}];};
         if ([pacBypass run] != 0) {[kernelExploit cleanup]; return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedExploitation userInfo:@{NSLocalizedDescriptionKey:@"Failed to bypass PAC"}];}
         // At this point we presume the PAC bypass has given us stable kcall primitives
@@ -209,10 +369,10 @@ typedef NS_ENUM(NSInteger, JBErrorCode) {
 
     if ([[DOEnvironmentManager sharedManager] isPPLBypassRequired]) {
         if ([DOEnvironmentManager sharedManager].isSPTM) {
-            [[DOUIManager sharedInstance] sendLog:[NSString stringWithFormat:DOLocalizedString(@"Bypassing SPTM (%@)"), pplBypass.name] debug:NO];
+            [[DOCoreContext sharedContext] sendLog:[NSString stringWithFormat:DOTranslate(@"Bypassing SPTM (%@)"), pplBypass.name] debug:NO];
         }
         else {
-            [[DOUIManager sharedInstance] sendLog:[NSString stringWithFormat:DOLocalizedString(@"Bypassing PPL (%@)"), pplBypass.name] debug:NO];
+            [[DOCoreContext sharedContext] sendLog:[NSString stringWithFormat:DOTranslate(@"Bypassing PPL (%@)"), pplBypass.name] debug:NO];
         }
 
         if ([pplBypass load] != 0) {[pacBypass cleanup]; [kernelExploit cleanup]; return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedLoadingExploit userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"Failed to load PPL bypass: %s", dlerror()]}];};
@@ -480,7 +640,7 @@ void *boomerang_server(struct boomerang_info *info)
                 [dopamineInstalledAppIds addObject:appId];
             }
             else {
-                return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedDuplicateApps userInfo:@{ NSLocalizedDescriptionKey : [NSString stringWithFormat:DOLocalizedString(@"Duplicate_Apps_Error_Dopamine_App"), appId, dopamineAppsPath]}];
+                return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedDuplicateApps userInfo:@{ NSLocalizedDescriptionKey : [NSString stringWithFormat:DOTranslate(@"Duplicate_Apps_Error_Dopamine_App"), appId, dopamineAppsPath]}];
             }
         }
     }
@@ -512,7 +672,7 @@ void *boomerang_server(struct boomerang_info *info)
             [duplicateAppsString appendString:duplicateApp];
         }
         [duplicateAppsString appendString:@"]"];
-        return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedDuplicateApps userInfo:@{ NSLocalizedDescriptionKey : [NSString stringWithFormat:DOLocalizedString(@"Duplicate_Apps_Error_User_App"), duplicateAppsString, dopamineAppsPath]}];
+        return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedDuplicateApps userInfo:@{ NSLocalizedDescriptionKey : [NSString stringWithFormat:DOTranslate(@"Duplicate_Apps_Error_User_App"), duplicateAppsString, dopamineAppsPath]}];
     }
     
     for (NSString *dopamineAppId in dopamineInstalledAppIds) {
@@ -520,7 +680,7 @@ void *boomerang_server(struct boomerang_info *info)
         if (appProxy.installed) {
             NSString *appProxyPath = [[appProxy.bundleURL.path stringByResolvingSymlinksInPath] stringByStandardizingPath];
             if (![appProxyPath hasPrefix:dopamineAppsPath]) {
-                return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedDuplicateApps userInfo:@{ NSLocalizedDescriptionKey : [NSString stringWithFormat:DOLocalizedString(@"Duplicate_Apps_Error_Icon_Cache"), dopamineAppId, dopamineAppsPath, appProxy.bundleURL.path]}];
+                return [NSError errorWithDomain:JBErrorDomain code:JBErrorCodeFailedDuplicateApps userInfo:@{ NSLocalizedDescriptionKey : [NSString stringWithFormat:DOTranslate(@"Duplicate_Apps_Error_Icon_Cache"), dopamineAppId, dopamineAppsPath, appProxy.bundleURL.path]}];
             }
         }
     }
@@ -533,12 +693,12 @@ void *boomerang_server(struct boomerang_info *info)
     if (@available(iOS 18.0, *)) {
         // On iOS 18+, jailbreak apps persist on the home screen even after a reboot into unjailbroken state
         // So we need to remove them from icon cache before deleting the bootstrap
-        [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Rebuilding Icon Cache") debug:NO];
+        [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Rebuilding Icon Cache") debug:NO];
         [[DOEnvironmentManager sharedManager] rebuildIconCache];
     }
 
     NSError *err;
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Removing Jailbreak") debug:NO];
+    [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Removing Jailbreak") debug:NO];
     err = [[DOEnvironmentManager sharedManager] deleteBootstrap];
     if (err) return err;
 
@@ -570,18 +730,47 @@ void *boomerang_server(struct boomerang_info *info)
     return nil;
 }
 
+- (DOResult *)run
+{
+    DOCoreContext *context = [DOCoreContext sharedContext];
+    if (![context beginOperation]) {
+        return [[DOResult alloc] initWithError:[NSError errorWithDomain:JBErrorDomain code:-100 userInfo:@{NSLocalizedDescriptionKey:@"A jailbreak operation is already running"}] removed:NO showLogs:YES action:DOCompletionActionNone];
+    }
+    self.lastResult = nil;
+    self.finalized = NO;
+    @try {
+        NSError *error = nil;
+        BOOL removed = NO, showLogs = YES;
+        [self runWithError:&error didRemoveJailbreak:&removed showLogs:&showLogs];
+        DOCompletionAction action = [context.host allowsUserspaceReboot] ? DOCompletionActionUserspaceReboot : DOCompletionActionNone;
+#if DOPAMINE_NO_REBOOT_TEST
+        action = DOCompletionActionNone;
+#endif
+        self.lastResult = [[DOResult alloc] initWithError:error removed:removed showLogs:showLogs action:action];
+        return self.lastResult;
+    }
+    @finally { [context endOperation]; }
+}
+
 - (void)runWithError:(NSError **)errOut didRemoveJailbreak:(BOOL*)didRemove showLogs:(BOOL *)showLogs
 {
-    BOOL removeJailbreakEnabled = [[DOPreferenceManager sharedManager] boolPreferenceValueForKey:@"removeJailbreakEnabled" fallback:NO];
-    BOOL tweaksEnabled = [[DOPreferenceManager sharedManager] boolPreferenceValueForKey:@"tweakInjectionEnabled" fallback:YES];
-    BOOL idownloadEnabled = [[DOPreferenceManager sharedManager] boolPreferenceValueForKey:@"idownloadEnabled" fallback:NO];
-    BOOL appJITEnabled = [[DOPreferenceManager sharedManager] boolPreferenceValueForKey:@"appJITEnabled" fallback:YES];
-    NSNumber *jetsamMultiplierOption = [[DOPreferenceManager sharedManager] preferenceValueForKey:@"jetsamMultiplier"];
+#if DOPAMINE_NO_REBOOT_TEST
+    // Capture this before elevatePrivileges changes HOME and the process identity.
+    NSString *documents = [DOCoreContext sharedContext].host.documentsDirectory;
+    self.noRebootReportPath = [documents stringByAppendingPathComponent:[NSString stringWithFormat:@"no-reboot-%@.json", NSUUID.UUID.UUIDString]];
+    self.noRebootBaseline = DONoRebootSnapshot();
+    DONoRebootLog(@"before", self.noRebootBaseline);
+#endif
+    BOOL removeJailbreakEnabled = [[DOCoreContext sharedContext] boolPreferenceValueForKey:@"removeJailbreakEnabled" fallback:NO];
+    BOOL tweaksEnabled = [[DOCoreContext sharedContext] boolPreferenceValueForKey:@"tweakInjectionEnabled" fallback:YES];
+    BOOL idownloadEnabled = [[DOCoreContext sharedContext] boolPreferenceValueForKey:@"idownloadEnabled" fallback:NO];
+    BOOL appJITEnabled = [[DOCoreContext sharedContext] boolPreferenceValueForKey:@"appJITEnabled" fallback:YES];
+    NSNumber *jetsamMultiplierOption = [[DOCoreContext sharedContext] preferenceValueForKey:@"jetsamMultiplier"];
     
     struct utsname systemInfo;
     uname(&systemInfo);
     NSString *startLog = [NSString stringWithFormat:@"Starting Jailbreak (Model: %s, %@, Configuration: {removeJailbreak=%d, tweakInjection=%d, idownload=%d, appJIT=%d})", systemInfo.machine, NSProcessInfo.processInfo.operatingSystemVersionString, removeJailbreakEnabled, tweaksEnabled, idownloadEnabled, appJITEnabled];
-    [[DOUIManager sharedInstance] sendLog:startLog debug:YES];
+    [[DOCoreContext sharedContext] sendLog:startLog debug:YES];
     
     *errOut = [self gatherSystemInformation];
     if (*errOut) return;
@@ -595,20 +784,20 @@ void *boomerang_server(struct boomerang_info *info)
     gSystemInfo.jailbreakSettings.markAppsAsDebugged = appJITEnabled;
     gSystemInfo.jailbreakSettings.jetsamMultiplier = jetsamMultiplierOption ? (jetsamMultiplierOption.doubleValue / 2) : 0;
     
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Building Phys R/W Primitive") debug:NO];
+    [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Building Phys R/W Primitive") debug:NO];
     *errOut = [self buildPhysRWPrimitive];
     if (*errOut) {
         [self cleanUpExploits];
         return;
     }
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Cleaning Up Exploits") debug:NO];
+    [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Cleaning Up Exploits") debug:NO];
     *errOut = [self cleanUpExploits];
     if (*errOut) return;
     
     // We will not be able to reset this after elevating privileges, so do it now
-    if (removeJailbreakEnabled) [[DOPreferenceManager sharedManager] setPreferenceValue:@NO forKey:@"removeJailbreakEnabled"];
+    if (removeJailbreakEnabled) [[DOCoreContext sharedContext] setPreferenceValue:@NO forKey:@"removeJailbreakEnabled"];
 
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Elevating Privileges") debug:NO];
+    [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Elevating Privileges") debug:NO];
     *errOut = [self elevatePrivileges];
 
     if (*errOut) return;
@@ -646,7 +835,7 @@ void *boomerang_server(struct boomerang_info *info)
         [[NSData data] writeToFile:JBROOT_PATH(@"/basebin/.safe_mode") atomically:YES];
     }
     
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Loading BaseBin TrustCache") debug:NO];
+    [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Loading BaseBin TrustCache") debug:NO];
     *errOut = [self loadBasebinTrustcache];
     if (*errOut) {
         [self cleanUpPostExploitation];
@@ -660,7 +849,7 @@ void *boomerang_server(struct boomerang_info *info)
         return;
     }
 
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Initializing Environment") debug:NO];
+    [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Initializing Environment") debug:NO];
     *errOut = [self injectLaunchdHook];
     if (*errOut) {
         [self cleanUpPostExploitation];
@@ -673,14 +862,14 @@ void *boomerang_server(struct boomerang_info *info)
     // Now that we can, protect important system files by bind mounting on top of them
     // This will be always be done during the userspace reboot
     // We also do it now though in case there is a failure between the now step and the userspace reboot
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Initializing Protection") debug:NO];
+    [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Initializing Protection") debug:NO];
     *errOut = [self applyProtection];
     if (*errOut) {
         [self cleanUpPostExploitation];
         return;
     }
     
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Applying Bind Mount") debug:NO];
+    [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Applying Bind Mount") debug:NO];
     *errOut = [self createFakeLib];
     if (*errOut) {
         [self cleanUpPostExploitation];
@@ -698,7 +887,7 @@ void *boomerang_server(struct boomerang_info *info)
     
     [[DOEnvironmentManager sharedManager] setIDownloadEnabled:idownloadEnabled needsUnsandbox:NO];
     
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Checking For Duplicate Apps") debug:NO];
+    [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Checking For Duplicate Apps") debug:NO];
     *errOut = [self ensureNoDuplicateApps];
     if (*errOut) {
         [self cleanUpPostExploitation];
@@ -720,8 +909,17 @@ void *boomerang_server(struct boomerang_info *info)
 
 - (void)finalize
 {
-    [[DOUIManager sharedInstance] sendLog:DOLocalizedString(@"Rebooting Userspace") debug:NO];
-    [[DOEnvironmentManager sharedManager] rebootUserspace];
+    // Completion is separate from execution and requires a successful result.
+    if (!self.lastResult || self.lastResult.error || self.lastResult.didRemoveJailbreak || self.finalized) return;
+    self.finalized = YES;
+#if DOPAMINE_NO_REBOOT_TEST
+    [[DOCoreContext sharedContext] sendLog:@"[NOREBOOT_TEST] Automatic userspace reboot is disabled in this build." debug:NO];
+#else
+    if (self.lastResult.completionAction == DOCompletionActionUserspaceReboot) {
+        [[DOCoreContext sharedContext] sendLog:DOTranslate(@"Rebooting Userspace") debug:NO];
+        [[DOEnvironmentManager sharedManager] rebootUserspace];
+    }
+#endif
 }
 
 - (IOSurfaceRef)allocatePurpleGfxMemWithSize:(size_t)size

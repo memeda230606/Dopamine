@@ -1,0 +1,9 @@
+Package: com.mmd.pluginlab.uiprobe
+Name: MMDLabUI
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: 仅修改实验室界面
+Maintainer: Local Research
+Author: Local Research
+Section: Tweaks
+Depends: firmware (>= 15.0)

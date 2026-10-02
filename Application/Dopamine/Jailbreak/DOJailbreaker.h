@@ -6,6 +6,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "DOCore.h"
 
 #import <xpc/xpc.h>
 
@@ -16,8 +17,11 @@ NS_ASSUME_NONNULL_BEGIN
     xpc_object_t _systemInfoXdict;
 }
 
-- (void)runWithError:(NSError **)errOut didRemoveJailbreak:(BOOL*)didRemove showLogs:(BOOL *)showLogs;
+- (DOResult *)run;
 - (void)finalize;
+#if DOPAMINE_NO_REBOOT_TEST
+- (NSDictionary *)finishNoRebootTest;
+#endif
 
 - (BOOL)contiguousMappingWorkaroundNeeded;
 - (void)applyContiguousMappingWorkaround;

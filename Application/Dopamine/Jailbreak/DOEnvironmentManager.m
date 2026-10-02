@@ -6,7 +6,6 @@
 //
 
 #import "DOEnvironmentManager.h"
-#import "UIImage+JPEG2000.h"
 
 #import <sys/sysctl.h>
 #import <sys/mount.h>
@@ -23,9 +22,9 @@
 #import <libjailbreak/carboncopy.h>
 
 #import <IOKit/IOKitLib.h>
-#import "DOUIManager.h"
+#import "DOCore.h"
 #import "DOExploitManager.h"
-#import "DOPreferenceManager.h"
+#import "DOCore.h"
 #import "NSData+Hex.h"
 #import <LocalAuthentication/LocalAuthentication.h>
 
@@ -72,7 +71,7 @@ extern char **environ;
 
 - (NSString *)appVersion
 {
-    return [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+    return [DOCoreContext sharedContext].host.applicationVersion;
 }
 
 - (NSString *)appVersionDisplayString
@@ -268,7 +267,7 @@ extern char **environ;
     static BOOL trollstoreInstallation = NO;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSString* trollStoreMarkerPath = [[[NSBundle mainBundle].bundlePath stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"_TrollStore"];
+        NSString* trollStoreMarkerPath = [[[DOCoreContext sharedContext].host.resourceDirectory stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"_TrollStore"];
         trollstoreInstallation = [[NSFileManager defaultManager] fileExistsAtPath:trollStoreMarkerPath];
     });
     return trollstoreInstallation;
@@ -508,7 +507,7 @@ extern char **environ;
 
 - (NSError*)updateEnvironment
 {
-    NSString *newBasebinTarPath = [[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:@"basebin.tar"];
+    NSString *newBasebinTarPath = [[DOCoreContext sharedContext] resourcePath:@"basebin.tar"];
     int result = jbclient_platform_stage_jailbreak_update(newBasebinTarPath.fileSystemRepresentation);
     if (result == 0) {
         [self rebootUserspace];
@@ -691,15 +690,15 @@ extern char **environ;
         return @"/System/Library/Caches/com.apple.kernelcaches/kernelcache";
     }
     else {
-        NSString *kernelInApp = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"kernelcache"];
+        NSString *kernelInApp = [[DOCoreContext sharedContext] resourcePath:@"kernelcache"];
         if ([[NSFileManager defaultManager] fileExistsAtPath:kernelInApp]) {
             return kernelInApp;
         }
         
-        [[DOUIManager sharedInstance] sendLog:@"Downloading Kernel" debug:NO];
-        NSString *kernelcachePath = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/kernelcache"];
+        [[DOCoreContext sharedContext] sendLog:@"Downloading Kernel" debug:NO];
+        NSString *kernelcachePath = [[DOCoreContext sharedContext].host.documentsDirectory stringByAppendingPathComponent:@"kernelcache"];
         if (![[NSFileManager defaultManager] fileExistsAtPath:kernelcachePath]) {
-            if (grab_images([NSHomeDirectory() stringByAppendingPathComponent:@"Documents"]) == false) return nil;
+            if (grab_images([DOCoreContext sharedContext].host.documentsDirectory) == false) return nil;
         }
         return kernelcachePath;
     }
@@ -707,17 +706,17 @@ extern char **environ;
 
 - (NSString *)accessibleSPTMPath
 {
-    NSString *sptmInAppPath = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"sptm.img4"];
+    NSString *sptmInAppPath = [[DOCoreContext sharedContext] resourcePath:@"sptm.img4"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:sptmInAppPath]) {
         return sptmInAppPath;
     }
     
-    NSString *sptmInDocsPath = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/sptm.img4"];
+    NSString *sptmInDocsPath = [[DOCoreContext sharedContext].host.documentsDirectory stringByAppendingPathComponent:@"sptm.img4"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:sptmInDocsPath]) {
         return sptmInDocsPath;
     }
     
-    sptmInDocsPath = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/sptm.im4p"];
+    sptmInDocsPath = [[DOCoreContext sharedContext].host.documentsDirectory stringByAppendingPathComponent:@"sptm.im4p"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:sptmInDocsPath]) {
         return sptmInDocsPath;
     }
@@ -734,17 +733,17 @@ extern char **environ;
 
 - (NSString *)accessibleTXMPath
 {
-    NSString *txmInAppPath = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"txm.img4"];
+    NSString *txmInAppPath = [[DOCoreContext sharedContext] resourcePath:@"txm.img4"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:txmInAppPath]) {
         return txmInAppPath;
     }
     
-    NSString *txmInDocsPath = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/txm.img4"];
+    NSString *txmInDocsPath = [[DOCoreContext sharedContext].host.documentsDirectory stringByAppendingPathComponent:@"txm.img4"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:txmInDocsPath]) {
         return txmInDocsPath;
     }
     
-    txmInDocsPath = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/txm.im4p"];
+    txmInDocsPath = [[DOCoreContext sharedContext].host.documentsDirectory stringByAppendingPathComponent:@"txm.im4p"];
     if ([[NSFileManager defaultManager] fileExistsAtPath:txmInDocsPath]) {
         return txmInDocsPath;
     }
@@ -873,21 +872,13 @@ extern char **environ;
 - (NSError *)updateBootLogo
 {
     const char *bootLogoPath = JBROOT_PATH("/basebin/bootlogo.jp2");
-    if ([[DOPreferenceManager sharedManager] boolPreferenceValueForKey:@"bootlogoEnabled" fallback:YES]) {
-        UIImage *bootLogoImage;
-
-        if ([[DOPreferenceManager sharedManager] boolPreferenceValueForKey:@"customBootlogoEnabled" fallback:NO]) {
-            bootLogoImage = [NSClassFromString(@"UIImage") imageWithContentsOfFile:[DOUIManager sharedInstance].bootlogoPath];
-        }
-
-        if (!bootLogoImage) {
-            bootLogoImage = [[DOUIManager sharedInstance] renderBootLogo];
-        }
+    if ([[DOCoreContext sharedContext] boolPreferenceValueForKey:@"bootlogoEnabled" fallback:YES]) {
+        NSData *bootLogoData = [[DOCoreContext sharedContext].host bootLogoData];
 
         [self runAsRoot:^{
             [self runUnsandboxed:^{
                 unlink(bootLogoPath);
-                [[bootLogoImage jp2DataWithCompressionQuality:0.9] writeToFile:[NSString stringWithUTF8String:bootLogoPath] atomically:NO];
+                [bootLogoData writeToFile:[NSString stringWithUTF8String:bootLogoPath] atomically:NO];
             }];
         }];
 

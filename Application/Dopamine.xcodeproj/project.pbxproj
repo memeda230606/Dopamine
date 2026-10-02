@@ -48,6 +48,8 @@
 		04DD0B442B7CBE2E0055DE4F /* DOThemeManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 04DD0B432B7CBE2E0055DE4F /* DOThemeManager.m */; };
 		04DD0B472B7CBEEA0055DE4F /* DOTheme.m in Sources */ = {isa = PBXBuildFile; fileRef = 04DD0B462B7CBEEA0055DE4F /* DOTheme.m */; };
 		04DD0B592B7D19E60055DE4F /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 04DD0B5B2B7D19E60055DE4F /* Localizable.strings */; };
+		1488D7B28B284A34C8737738 /* DOBootstrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C029F452B4DFD910071DE58 /* DOBootstrapper.m */; };
+		152330FC2B64585675DECE6E /* NSData+Hex.m in Sources */ = {isa = PBXBuildFile; fileRef = 8CC139812B53DE6C00230143 /* NSData+Hex.m */; };
 		2F11A317301BFDAE00C1C9F0 /* libjailbreak.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C3B2E03301BC1F400C979A6 /* libjailbreak.dylib */; platformFilter = ios; };
 		2F11A325301BFE9200C1C9F0 /* momentarius.c in Sources */ = {isa = PBXBuildFile; fileRef = 2F11A322301BFE9200C1C9F0 /* momentarius.c */; };
 		2F11A326301BFEC900C1C9F0 /* momentarius.c in Sources */ = {isa = PBXBuildFile; fileRef = 2F11A322301BFE9200C1C9F0 /* momentarius.c */; };
@@ -81,17 +83,16 @@
 		3165D0073020A584002737DA /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3165D0063020A584002737DA /* IOKit.framework */; };
 		3165D0083020A58D002737DA /* libjailbreak.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C3B2E03301BC1F400C979A6 /* libjailbreak.dylib */; platformFilter = ios; };
 		3165D0093020A58D002737DA /* libjailbreak.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 8C3B2E03301BC1F400C979A6 /* libjailbreak.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		418C84A6AA10680A2D411DFA /* DOExploitManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C029F422B4DFD5D0071DE58 /* DOExploitManager.m */; };
 		51F19D052BBF456200896361 /* libpartial.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 51AB98D92BBF44390042EA7B /* libpartial.a */; };
+		711A90BFCE8565A4F3F58791 /* DOAppCoreHost.m in Sources */ = {isa = PBXBuildFile; fileRef = B8CF1C8C99DE80CAE0A863C2 /* DOAppCoreHost.m */; };
+		71C0295F0C0152FF7C50AFFC /* DOJailbreaker.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C029F622B4E2E140071DE58 /* DOJailbreaker.m */; };
+		75532FBAA3066C37A532BCFF /* DOExploit.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C029F4D2B4E1FF30071DE58 /* DOExploit.m */; };
 		7CD8FC3F3022AADF00AF864E /* utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 7CD8FC3B3022AADF00AF864E /* utils.c */; };
 		7CD8FC403022AADF00AF864E /* momentarius_a12.c in Sources */ = {isa = PBXBuildFile; fileRef = 7CD8FC373022AADF00AF864E /* momentarius_a12.c */; };
 		7CD8FC413022AADF00AF864E /* momentarius_a13.c in Sources */ = {isa = PBXBuildFile; fileRef = 7CD8FC393022AADF00AF864E /* momentarius_a13.c */; };
 		7CD8FC423022AADF00AF864E /* utils.h in Headers */ = {isa = PBXBuildFile; fileRef = 7CD8FC3A3022AADF00AF864E /* utils.h */; };
-		8614E357301AB63E00B1B88C /* DOBootstrapper+zstd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8614E356301AB63E00B1B88C /* DOBootstrapper+zstd.m */; };
-		8C029F432B4DFD5D0071DE58 /* DOExploitManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C029F422B4DFD5D0071DE58 /* DOExploitManager.m */; };
-		8C029F462B4DFD910071DE58 /* DOBootstrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C029F452B4DFD910071DE58 /* DOBootstrapper.m */; };
-		8C029F4E2B4E1FF30071DE58 /* DOExploit.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C029F4D2B4E1FF30071DE58 /* DOExploit.m */; };
-		8C029F602B4E25350071DE58 /* DOEnvironmentManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C029F5F2B4E25350071DE58 /* DOEnvironmentManager.m */; };
-		8C029F632B4E2E140071DE58 /* DOJailbreaker.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C029F622B4E2E140071DE58 /* DOJailbreaker.m */; };
+		7EAEF4AFB67B499036A07FD2 /* DOEnvironmentManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C029F5F2B4E25350071DE58 /* DOEnvironmentManager.m */; };
 		8C029F662B4E2E970071DE58 /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C029F652B4E2E7D0071DE58 /* libcompression.tbd */; };
 		8C029F682B4E31D50071DE58 /* libMobileGestalt.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C029F672B4E31D50071DE58 /* libMobileGestalt.tbd */; };
 		8C029F6B2B4E320E0071DE58 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 8C029F6A2B4E320E0071DE58 /* libz.tbd */; };
@@ -226,11 +227,9 @@
 		8C7198282ABF0E84003C6658 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8C7198262ABF0E84003C6658 /* LaunchScreen.storyboard */; };
 		8C71982B2ABF0E84003C6658 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C71982A2ABF0E84003C6658 /* main.m */; };
 		8C9E46292ACA1CC700B5456A /* UIImage+Blur.m in Sources */ = {isa = PBXBuildFile; fileRef = 8C9E46282ACA1CC700B5456A /* UIImage+Blur.m */; };
-		8CB4087D301FFB130097E18B /* clock_alarm.c in Sources */ = {isa = PBXBuildFile; fileRef = 8CB4087C301FFB050097E18B /* clock_alarm.c */; };
 		8CB94F042B59E17A0098BAFD /* basebin.tc in Resources */ = {isa = PBXBuildFile; fileRef = 8CB94F022B59E17A0098BAFD /* basebin.tc */; };
 		8CB94F052B59E17A0098BAFD /* basebin.tar in Resources */ = {isa = PBXBuildFile; fileRef = 8CB94F032B59E17A0098BAFD /* basebin.tar */; };
 		8CBF1A4A2EC3B71700EB2308 /* UIImage+JPEG2000.m in Sources */ = {isa = PBXBuildFile; fileRef = 8CBF1A492EC3B71700EB2308 /* UIImage+JPEG2000.m */; };
-		8CC139822B53DE6C00230143 /* NSData+Hex.m in Sources */ = {isa = PBXBuildFile; fileRef = 8CC139812B53DE6C00230143 /* NSData+Hex.m */; };
 		8CC139832B53E05300230143 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8CDD08372B4F682500A32B61 /* IOKit.framework */; };
 		8CCD2FC42B77AAA000F9C5DA /* basebin-link.deb in Resources */ = {isa = PBXBuildFile; fileRef = 8CCD2FC32B77AA9200F9C5DA /* basebin-link.deb */; };
 		8CCD8A882B6F16D0004B72B0 /* libroot.deb in Resources */ = {isa = PBXBuildFile; fileRef = 8CCD8A832B6F165A004B72B0 /* libroot.deb */; };
@@ -253,6 +252,11 @@
 		8CF3E8662F72D57800931CA8 /* DarkSword.m in Sources */ = {isa = PBXBuildFile; fileRef = 8CF3E85B2F72D50200931CA8 /* DarkSword.m */; };
 		8CF3E8672F72DD9400931CA8 /* DarkSword.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8CF3E8582F72D45800931CA8 /* DarkSword.framework */; };
 		8CF3E8682F72DD9400931CA8 /* DarkSword.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 8CF3E8582F72D45800931CA8 /* DarkSword.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9CB3F49CE0EFAB3185BE8117 /* libDopamineCore.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BE0655EA7E9116D513D2851E /* libDopamineCore.a */; };
+		A32AC2FBF5CF6A159B40282A /* DOCore.m in Sources */ = {isa = PBXBuildFile; fileRef = 485AA9D4B66FA226B117C6F9 /* DOCore.m */; };
+		B284220DB10EE78235D663CC /* DOCoreDiagnostics.m in Sources */ = {isa = PBXBuildFile; fileRef = 3FFC74FD2373DDB7EB3EE152 /* DOCoreDiagnostics.m */; };
+		D044AB2B33DE65748C304EE1 /* DOBootstrapper+zstd.m in Sources */ = {isa = PBXBuildFile; fileRef = 8614E356301AB63E00B1B88C /* DOBootstrapper+zstd.m */; };
+		DA696D9E66B8E5CDC2EF446B /* clock_alarm.c in Sources */ = {isa = PBXBuildFile; fileRef = 8CB4087C301FFB050097E18B /* clock_alarm.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -262,6 +266,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 2F11A313301BFDAE00C1C9F0;
 			remoteInfo = momentarius;
+		};
+		30E9AFA9E25128E9559C5B8B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8C71980D2ABF0E82003C6658 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 385640CB4DC544B387049769;
+			remoteInfo = DopamineCore;
 		};
 		3165CFD33020A516002737DA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -515,13 +526,18 @@
 		3165D0013020A579002737DA /* Titan.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Titan.h; sourceTree = "<group>"; };
 		3165D0023020A579002737DA /* Titan.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Titan.m; sourceTree = "<group>"; };
 		3165D0063020A584002737DA /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.1.sdk/System/Library/Frameworks/IOKit.framework; sourceTree = DEVELOPER_DIR; };
+		3FFC74FD2373DDB7EB3EE152 /* DOCoreDiagnostics.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = DOCoreDiagnostics.m; sourceTree = "<group>"; };
+		485AA9D4B66FA226B117C6F9 /* DOCore.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = DOCore.m; sourceTree = "<group>"; };
 		51AB98D92BBF44390042EA7B /* libpartial.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpartial.a; path = Dopamine/Dependencies/libpartial.a; sourceTree = "<group>"; };
+		7A3FE25B61C9E9328DAC7424 /* DOCore.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = DOCore.h; sourceTree = "<group>"; };
+		7BB7F6575413A50C69F5EF3E /* DOCoreDiagnostics.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = DOCoreDiagnostics.h; sourceTree = "<group>"; };
 		7CD8FC373022AADF00AF864E /* momentarius_a12.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = momentarius_a12.c; sourceTree = "<group>"; };
 		7CD8FC393022AADF00AF864E /* momentarius_a13.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = momentarius_a13.c; sourceTree = "<group>"; };
 		7CD8FC3A3022AADF00AF864E /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		7CD8FC3B3022AADF00AF864E /* utils.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = utils.c; sourceTree = "<group>"; };
 		8614E355301AB63E00B1B88C /* DOBootstrapper+zstd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DOBootstrapper+zstd.h"; sourceTree = "<group>"; };
 		8614E356301AB63E00B1B88C /* DOBootstrapper+zstd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "DOBootstrapper+zstd.m"; sourceTree = "<group>"; };
+		8BC6950EB811C9F9D9419207 /* DOAppCoreHost.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = DOAppCoreHost.h; sourceTree = "<group>"; };
 		8C029F412B4DFD5D0071DE58 /* DOExploitManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DOExploitManager.h; sourceTree = "<group>"; };
 		8C029F422B4DFD5D0071DE58 /* DOExploitManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DOExploitManager.m; sourceTree = "<group>"; };
 		8C029F442B4DFD910071DE58 /* DOBootstrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DOBootstrapper.h; sourceTree = "<group>"; };
@@ -696,11 +712,13 @@
 		8CF3E8582F72D45800931CA8 /* DarkSword.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = DarkSword.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8CF3E85B2F72D50200931CA8 /* DarkSword.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DarkSword.m; sourceTree = "<group>"; };
 		8CF3E85E2F72D51200931CA8 /* DarkSword.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DarkSword.h; sourceTree = "<group>"; };
+		B8CF1C8C99DE80CAE0A863C2 /* DOAppCoreHost.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = DOAppCoreHost.m; sourceTree = "<group>"; };
+		BE0655EA7E9116D513D2851E /* libDopamineCore.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libDopamineCore.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		C075B0CB2B8F2BCE009A26BB /* th */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = th; path = th.lproj/Localizable.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		2F11A31F301BFDAF00C1C9F0 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		2F11A31F301BFDAF00C1C9F0 /* Exceptions for "ClearSword" folder in "momentarius" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				ClearSword.h,
@@ -724,7 +742,7 @@
 			);
 			target = 2F11A313301BFDAE00C1C9F0 /* momentarius */;
 		};
-		8C3B2DF8301BC05200C979A6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		8C3B2DF8301BC05200C979A6 /* Exceptions for "ClearSword" folder in "ClearSword" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -737,7 +755,19 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		8C3B2DEF301BC05200C979A6 /* ClearSword */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (8C3B2DF8301BC05200C979A6 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, 2F11A31F301BFDAF00C1C9F0 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ClearSword; sourceTree = "<group>"; };
+		8C3B2DEF301BC05200C979A6 /* ClearSword */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8C3B2DF8301BC05200C979A6 /* Exceptions for "ClearSword" folder in "ClearSword" target */,
+				2F11A31F301BFDAF00C1C9F0 /* Exceptions for "ClearSword" folder in "momentarius" target */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = ClearSword;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -757,6 +787,13 @@
 			files = (
 				3165D0083020A58D002737DA /* libjailbreak.dylib in Frameworks */,
 				3165D0073020A584002737DA /* IOKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5B5E7E4381C43DEB94640C7D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -826,6 +863,7 @@
 				8C58E5592B7EAF8000E3ADAA /* CoreServices.framework in Frameworks */,
 				8CF3E8672F72DD9400931CA8 /* DarkSword.framework in Frameworks */,
 				8C4ABEB62B52094100B43C9B /* libjailbreak.dylib in Frameworks */,
+				9CB3F49CE0EFAB3185BE8117 /* libDopamineCore.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1064,6 +1102,16 @@
 				3165CFEE3020A565002737DA /* titan.m */,
 			);
 			path = exploit;
+			sourceTree = "<group>";
+		};
+		3659886D4552C60083B3AD76 /* CoreAdapter */ = {
+			isa = PBXGroup;
+			children = (
+				8BC6950EB811C9F9D9419207 /* DOAppCoreHost.h */,
+				B8CF1C8C99DE80CAE0A863C2 /* DOAppCoreHost.m */,
+			);
+			name = CoreAdapter;
+			path = Dopamine/CoreAdapter;
 			sourceTree = "<group>";
 		};
 		8C029F402B4DFCFE0071DE58 /* Jailbreak */ = {
@@ -1324,6 +1372,8 @@
 				8C7198172ABF0E82003C6658 /* Dopamine */,
 				8C7198162ABF0E82003C6658 /* Products */,
 				8C029F642B4E2E7D0071DE58 /* Frameworks */,
+				987AA32D4F2B6647AFED4B84 /* DopamineCore */,
+				3659886D4552C60083B3AD76 /* CoreAdapter */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1340,6 +1390,7 @@
 				8C3B2DEE301BC05200C979A6 /* ClearSword.framework */,
 				2F11A31D301BFDAE00C1C9F0 /* momentarius.framework */,
 				3165CFCF3020A516002737DA /* Titan.framework */,
+				BE0655EA7E9116D513D2851E /* libDopamineCore.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1457,6 +1508,18 @@
 				8CB408803020101D0097E18B /* Info.plist */,
 			);
 			path = DarkSword;
+			sourceTree = "<group>";
+		};
+		987AA32D4F2B6647AFED4B84 /* DopamineCore */ = {
+			isa = PBXGroup;
+			children = (
+				7A3FE25B61C9E9328DAC7424 /* DOCore.h */,
+				485AA9D4B66FA226B117C6F9 /* DOCore.m */,
+				7BB7F6575413A50C69F5EF3E /* DOCoreDiagnostics.h */,
+				3FFC74FD2373DDB7EB3EE152 /* DOCoreDiagnostics.m */,
+			);
+			name = DopamineCore;
+			path = ../DopamineCore;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1600,6 +1663,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FC9E499EEE75D12DA3D3F03E /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
@@ -1622,8 +1692,6 @@
 				8C3B2DEF301BC05200C979A6 /* ClearSword */,
 			);
 			name = momentarius;
-			packageProductDependencies = (
-			);
 			productName = ClearSword;
 			productReference = 2F11A31D301BFDAE00C1C9F0 /* momentarius.framework */;
 			productType = "com.apple.product-type.framework";
@@ -1644,11 +1712,26 @@
 			dependencies = (
 			);
 			name = Titan;
-			packageProductDependencies = (
-			);
 			productName = Titan;
 			productReference = 3165CFCF3020A516002737DA /* Titan.framework */;
 			productType = "com.apple.product-type.framework";
+		};
+		385640CB4DC544B387049769 /* DopamineCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F0716C8C0529F1EC8B4CBAEF /* Build configuration list for PBXNativeTarget "DopamineCore" */;
+			buildPhases = (
+				FC9E499EEE75D12DA3D3F03E /* Headers */,
+				8C725EA69AB0F9C22CFDC5AD /* Sources */,
+				5B5E7E4381C43DEB94640C7D /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DopamineCore;
+			productName = DopamineCore;
+			productReference = BE0655EA7E9116D513D2851E /* libDopamineCore.a */;
+			productType = "com.apple.product-type.library.static";
 		};
 		8C05B0022B63152B001A7CF3 /* badRecovery */ = {
 			isa = PBXNativeTarget;
@@ -1706,8 +1789,6 @@
 				8C3B2DEF301BC05200C979A6 /* ClearSword */,
 			);
 			name = ClearSword;
-			packageProductDependencies = (
-			);
 			productName = ClearSword;
 			productReference = 8C3B2DEE301BC05200C979A6 /* ClearSword.framework */;
 			productType = "com.apple.product-type.framework";
@@ -1773,6 +1854,7 @@
 				8C3B2E00301BC18300C979A6 /* PBXTargetDependency */,
 				2F11A331301C00FF00C1C9F0 /* PBXTargetDependency */,
 				3165CFD43020A516002737DA /* PBXTargetDependency */,
+				38B955B72C21B4056B10705D /* PBXTargetDependency */,
 			);
 			name = Dopamine;
 			packageProductDependencies = (
@@ -1910,6 +1992,7 @@
 				8C3B2DED301BC05200C979A6 /* ClearSword */,
 				2F11A313301BFDAE00C1C9F0 /* momentarius */,
 				3165CFCE3020A516002737DA /* Titan */,
+				385640CB4DC544B387049769 /* DopamineCore */,
 			);
 		};
 /* End PBXProject section */
@@ -2284,7 +2367,6 @@
 				042479A52B66916B0082581B /* DOCreditsCell.m in Sources */,
 				8C296BAC2BE049E4007C2AD1 /* DOPSExploitListItemsController.m in Sources */,
 				042479B82B66916B0082581B /* DOMainViewController.m in Sources */,
-				8C029F432B4DFD5D0071DE58 /* DOExploitManager.m in Sources */,
 				042479B02B66916B0082581B /* DOLoadingIndicator.m in Sources */,
 				042479AC2B66916B0082581B /* DOJailbreakButton.m in Sources */,
 				8CBF1A4A2EC3B71700EB2308 /* UIImage+JPEG2000.m in Sources */,
@@ -2292,32 +2374,25 @@
 				04DD0B472B7CBEEA0055DE4F /* DOTheme.m in Sources */,
 				04DD0B442B7CBE2E0055DE4F /* DOThemeManager.m in Sources */,
 				042479A92B66916B0082581B /* DOModalBackAction.m in Sources */,
-				8CC139822B53DE6C00230143 /* NSData+Hex.m in Sources */,
 				042479AE2B66916B0082581B /* DOUIManager.m in Sources */,
 				8C71981A2ABF0E82003C6658 /* DOAppDelegate.m in Sources */,
 				042479B72B66916B0082581B /* DOActionMenuView.m in Sources */,
-				8C029F632B4E2E140071DE58 /* DOJailbreaker.m in Sources */,
 				040622AA2B77FE8E00393AAD /* DOPkgManagerPickerViewController.m in Sources */,
 				042479A82B66916B0082581B /* DOPSListController.m in Sources */,
 				042479B12B66916B0082581B /* DODoubleHelixIndicator.m in Sources */,
 				042479A72B66916B0082581B /* DOButtonCell.m in Sources */,
 				042479B92B66916B0082581B /* DOGlobalAppearance.m in Sources */,
 				8C9E46292ACA1CC700B5456A /* UIImage+Blur.m in Sources */,
-				8C029F462B4DFD910071DE58 /* DOBootstrapper.m in Sources */,
 				042479AD2B66916B0082581B /* DOHeaderView.m in Sources */,
 				042479AB2B66916B0082581B /* DOModalTransitionScale.m in Sources */,
 				2F11A325301BFE9200C1C9F0 /* momentarius.c in Sources */,
 				04DD0B352B7BA38C0055DE4F /* DOLicenseViewController.m in Sources */,
 				042479AA2B66916B0082581B /* DOModalTransitionPush.m in Sources */,
-				8CB4087D301FFB130097E18B /* clock_alarm.c in Sources */,
 				0443A9B12B79D9C10014C933 /* DOPSListItemsController.m in Sources */,
 				8C71982B2ABF0E84003C6658 /* main.m in Sources */,
 				04DD0B3D2B7C88210055DE4F /* DOLogCrashViewController.m in Sources */,
-				8614E357301AB63E00B1B88C /* DOBootstrapper+zstd.m in Sources */,
-				8C029F602B4E25350071DE58 /* DOEnvironmentManager.m in Sources */,
 				04C246A12B73225800E17924 /* DODownloadViewController.m in Sources */,
 				042479B52B66916B0082581B /* DOLyricsLogItemView.m in Sources */,
-				8C029F4E2B4E1FF30071DE58 /* DOExploit.m in Sources */,
 				04C2469D2B73220400E17924 /* DOUpdateCircleView.m in Sources */,
 				04C246B12B74B05800E17924 /* DOPkgManagerPickerView.m in Sources */,
 				042479B42B66916B0082581B /* DOProgressiveBlurView.m in Sources */,
@@ -2325,6 +2400,24 @@
 				042479B62B66916B0082581B /* DOActionMenuButton.m in Sources */,
 				8C71981D2ABF0E82003C6658 /* DOSceneDelegate.m in Sources */,
 				042479A32B66916B0082581B /* DOSettingsController.m in Sources */,
+				711A90BFCE8565A4F3F58791 /* DOAppCoreHost.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8C725EA69AB0F9C22CFDC5AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				418C84A6AA10680A2D411DFA /* DOExploitManager.m in Sources */,
+				152330FC2B64585675DECE6E /* NSData+Hex.m in Sources */,
+				71C0295F0C0152FF7C50AFFC /* DOJailbreaker.m in Sources */,
+				1488D7B28B284A34C8737738 /* DOBootstrapper.m in Sources */,
+				DA696D9E66B8E5CDC2EF446B /* clock_alarm.c in Sources */,
+				D044AB2B33DE65748C304EE1 /* DOBootstrapper+zstd.m in Sources */,
+				7EAEF4AFB67B499036A07FD2 /* DOEnvironmentManager.m in Sources */,
+				75532FBAA3066C37A532BCFF /* DOExploit.m in Sources */,
+				A32AC2FBF5CF6A159B40282A /* DOCore.m in Sources */,
+				B284220DB10EE78235D663CC /* DOCoreDiagnostics.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2356,6 +2449,12 @@
 			isa = PBXTargetDependency;
 			target = 3165CFCE3020A516002737DA /* Titan */;
 			targetProxy = 3165CFD33020A516002737DA /* PBXContainerItemProxy */;
+		};
+		38B955B72C21B4056B10705D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = DopamineCore;
+			target = 385640CB4DC544B387049769 /* DopamineCore */;
+			targetProxy = 30E9AFA9E25128E9559C5B8B /* PBXContainerItemProxy */;
 		};
 		8C05B0082B63152B001A7CF3 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2444,6 +2543,28 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		01FD96BE99CF30DE56D3266E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../DopamineCore",
+					"$(SRCROOT)/Dopamine/Jailbreak",
+					"$(SRCROOT)/Dopamine/Extensions",
+					"$(SRCROOT)/Dopamine/Headers",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = DopamineCore;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		2F11A31B301BFDAE00C1C9F0 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -3089,6 +3210,15 @@
 					"$(PROJECT_DIR)/Frameworks",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../DopamineCore",
+					"$(SRCROOT)/Dopamine/Jailbreak",
+					"$(SRCROOT)/Dopamine/Extensions",
+					"$(SRCROOT)/Dopamine/Headers",
+					"$(SRCROOT)/Dopamine/CoreAdapter",
+					"$(SRCROOT)/Dopamine/UI",
+				);
 				INFOPLIST_FILE = Dopamine/Info.plist;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Dopamine needs to access your photo library to support picking a boot logo";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -3106,6 +3236,10 @@
 					"$(PROJECT_DIR)/Dopamine/Resources",
 				);
 				MARKETING_VERSION = 3.0.10;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.opa334.Dopamine;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -3127,6 +3261,15 @@
 					"$(PROJECT_DIR)/Frameworks",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../DopamineCore",
+					"$(SRCROOT)/Dopamine/Jailbreak",
+					"$(SRCROOT)/Dopamine/Extensions",
+					"$(SRCROOT)/Dopamine/Headers",
+					"$(SRCROOT)/Dopamine/CoreAdapter",
+					"$(SRCROOT)/Dopamine/UI",
+				);
 				INFOPLIST_FILE = Dopamine/Info.plist;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Dopamine needs to access your photo library to support picking a boot logo";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -3144,6 +3287,10 @@
 					"$(PROJECT_DIR)/Dopamine/Resources",
 				);
 				MARKETING_VERSION = 3.0.10;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.opa334.Dopamine;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -3294,6 +3441,27 @@
 			};
 			name = Release;
 		};
+		E9462B9CD99F72CA2AC7B6AF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../DopamineCore",
+					"$(SRCROOT)/Dopamine/Jailbreak",
+					"$(SRCROOT)/Dopamine/Extensions",
+					"$(SRCROOT)/Dopamine/Headers",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = DopamineCore;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -3392,6 +3560,15 @@
 			buildConfigurations = (
 				8CF3E8562F72D45800931CA8 /* Debug */,
 				8CF3E8572F72D45800931CA8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F0716C8C0529F1EC8B4CBAEF /* Build configuration list for PBXNativeTarget "DopamineCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				01FD96BE99CF30DE56D3266E /* Release */,
+				E9462B9CD99F72CA2AC7B6AF /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

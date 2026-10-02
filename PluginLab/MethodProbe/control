@@ -1,0 +1,9 @@
+Package: com.mmd.pluginlab.methodprobe
+Name: MMDLabMethod
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: 方法拦截和返回值测试
+Maintainer: Local Research
+Author: Local Research
+Section: Tweaks
+Depends: firmware (>= 15.0)

@@ -1,0 +1,9 @@
+Package: com.mmd.pluginlab.fileprobe
+Name: MMDLabFile
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: 仅在本 App 内读写并清理测试文件
+Maintainer: Local Research
+Author: Local Research
+Section: Tweaks
+Depends: firmware (>= 15.0)

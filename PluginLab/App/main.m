@@ -1,0 +1,316 @@
+#import <UIKit/UIKit.h>
+#import <TargetConditionals.h>
+#import <CommonCrypto/CommonDigest.h>
+#import <os/log.h>
+#import <sys/sysctl.h>
+#import <sys/stat.h>
+#import <sys/wait.h>
+#import <spawn.h>
+#import <dlfcn.h>
+#import <signal.h>
+
+extern char **environ;
+extern int posix_spawnattr_set_persona_np(posix_spawnattr_t *, uid_t, uint32_t);
+extern int posix_spawnattr_set_persona_uid_np(posix_spawnattr_t *, uid_t);
+extern int posix_spawnattr_set_persona_gid_np(posix_spawnattr_t *, gid_t);
+
+static NSArray *PLNames(void) {
+    return @[@"MMDLabLoad", @"MMDLabMethod", @"MMDLabUI", @"MMDLabFile", @"MMDLabNotification"];
+}
+static NSString *PLHash(NSData *data) {
+    unsigned char hash[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256(data.bytes, (CC_LONG)data.length, hash);
+    NSMutableString *s = [NSMutableString string];
+    for (unsigned int i = 0; i < sizeof(hash); i++) [s appendFormat:@"%02x", hash[i]];
+    return s;
+}
+static NSDictionary *PLManifest(void) {
+    NSData *data = [NSData dataWithContentsOfURL:[NSBundle.mainBundle URLForResource:@"plugins" withExtension:@"json"]];
+    return data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : @{};
+}
+static void PLLog(NSString *phase, NSDictionary *value) {
+    static os_log_t log;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ log = os_log_create("com.mmd.PluginLab", "Test"); });
+    NSData *json = [NSJSONSerialization dataWithJSONObject:value options:NSJSONWritingSortedKeys error:nil];
+    NSString *text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
+    os_log_with_type(log, OS_LOG_TYPE_DEFAULT, "[PLUGINLAB] %{public}s %{public}s", phase.UTF8String, text.UTF8String);
+}
+static NSDictionary *PLBootSnapshot(void) {
+    NSMutableDictionary *v = [@{@"pid": @(getpid()), @"uid": @(getuid()), @"euid": @(geteuid())} mutableCopy];
+    char uuid[128] = {0}; size_t size = sizeof(uuid);
+    if (!sysctlbyname("kern.bootsessionuuid", uuid, &size, NULL, 0)) v[@"boot_uuid"] = @(uuid);
+    int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0}; size = 0;
+    if (!sysctl(mib, 4, NULL, &size, NULL, 0)) {
+        size += 32 * sizeof(struct kinfo_proc);
+        struct kinfo_proc *p = calloc(1, size);
+        if (p && !sysctl(mib, 4, p, &size, NULL, 0)) {
+            for (size_t i = 0; i < size / sizeof(*p); i++) {
+                if (!strcmp(p[i].kp_proc.p_comm, "SpringBoard")) {
+                    struct timeval t = p[i].kp_proc.p_starttime;
+                    v[@"springboard"] = @{@"pid": @(p[i].kp_proc.p_pid), @"sec": @((long long)t.tv_sec), @"usec": @(t.tv_usec)};
+                    break;
+                }
+            }
+        }
+        free(p);
+    }
+    return v;
+}
+static void *PLJailbreakLibrary(void) {
+    static void *library;
+    if (!library) library = dlopen("/var/jb/basebin/libjailbreak.dylib", RTLD_NOW | RTLD_LOCAL);
+    return library;
+}
+static NSString *PLPluginDirectory(void) {
+#if TARGET_OS_SIMULATOR
+    return [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/StandalonePlugins"];
+#else
+    return @"/var/jb/Library/MobileSubstrate/DynamicLibraries";
+#endif
+}
+static NSDictionary *PLInstall(BOOL remove) {
+    NSFileManager *fm = NSFileManager.defaultManager;
+#if !TARGET_OS_SIMULATOR
+    if (geteuid() != 0) return @{@"ok": @NO, @"error": @"安装辅助进程未获得 root"};
+    void *library = PLJailbreakLibrary();
+    if (!library) return @{@"ok": @NO, @"error": @"无法载入现有越狱服务客户端"};
+    char *(*getRoot)(void) = dlsym(library, "jbclient_get_jbroot");
+    if (!getRoot || !getRoot()) return @{@"ok": @NO, @"error": @"越狱服务当前不可用"};
+#endif
+    NSDictionary *manifest = PLManifest();
+    NSArray *plugins = manifest[@"plugins"];
+    if (plugins.count != PLNames().count) return @{@"ok": @NO, @"error": @"插件清单不完整"};
+    NSString *directory = PLPluginDirectory();
+    NSError *error = nil;
+    if (![fm createDirectoryAtPath:directory withIntermediateDirectories:YES attributes:nil error:&error])
+        return @{@"ok": @NO, @"error": error.localizedDescription};
+    NSMutableArray *steps = [NSMutableArray array];
+    BOOL allOK = YES;
+    for (NSUInteger i = 0; i < plugins.count; i++) {
+        NSDictionary *plugin = plugins[i]; NSString *name = PLNames()[i];
+        NSData *binary = [[NSData alloc] initWithBase64EncodedString:plugin[@"binary"] options:0];
+        if (![name isEqual:plugin[@"name"]] || ![PLHash(binary ?: NSData.data) isEqual:plugin[@"sha256"]])
+            return @{@"ok": @NO, @"error": @"插件内容校验失败"};
+        NSString *path = [directory stringByAppendingPathComponent:[name stringByAppendingString:@".dylib"]];
+        NSString *filterPath = [directory stringByAppendingPathComponent:[name stringByAppendingString:@".plist"]];
+        NSData *filter = [NSPropertyListSerialization dataWithPropertyList:@{@"Filter": @{@"Bundles": @[@"com.mmd.PluginLab"]}}
+            format:NSPropertyListXMLFormat_v1_0 options:0 error:&error];
+        struct stat st;
+        if (!lstat(path.fileSystemRepresentation, &st) && S_ISLNK(st.st_mode))
+            return @{@"ok": @NO, @"error": @"测试插件目标是符号链接，已停止"};
+        NSData *old = [NSData dataWithContentsOfFile:path];
+        if (old && ![PLHash(old) isEqual:plugin[@"sha256"]])
+            return @{@"ok": @NO, @"error": [@"存在不同版本，保留文件：" stringByAppendingString:name]};
+        BOOL ok;
+        int trust = 0;
+        if (remove) {
+            ok = (!old || [fm removeItemAtPath:path error:&error]);
+            // Remove only the exact filter generated by this project.
+            NSData *existingFilter = [NSData dataWithContentsOfFile:filterPath];
+            if ([existingFilter isEqual:filter]) ok = [fm removeItemAtPath:filterPath error:&error] && ok;
+        } else {
+            ok = [binary writeToFile:path options:NSDataWritingAtomic error:&error] &&
+                 [filter writeToFile:filterPath options:NSDataWritingAtomic error:&error];
+            if (ok) { chmod(path.fileSystemRepresentation, 0755); chmod(filterPath.fileSystemRepresentation, 0644); }
+#if !TARGET_OS_SIMULATOR
+            int (*trustFile)(const char *) = dlsym(PLJailbreakLibrary(), "jbclient_trust_file_by_path");
+            trust = ok && trustFile ? trustFile(path.fileSystemRepresentation) : -1;
+            ok = ok && trust == 0;
+#endif
+        }
+        [steps addObject:@{@"name": name, @"ok": @(ok), @"trust_result": @(trust), @"error": error.localizedDescription ?: @""}];
+        allOK &= ok;
+        if (!ok) break;
+    }
+    return @{@"ok": @(allOK), @"uid": @(getuid()), @"euid": @(geteuid()), @"directory": directory, @"plugins": steps};
+}
+static NSDictionary *PLRunInstaller(BOOL remove) {
+#if TARGET_OS_SIMULATOR
+    return PLInstall(remove);
+#else
+    int fds[2]; if (pipe(fds)) return @{@"ok": @NO, @"pipe_errno": @(errno)};
+    posix_spawn_file_actions_t actions; posix_spawn_file_actions_init(&actions);
+    posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
+    posix_spawn_file_actions_addclose(&actions, fds[0]);
+    posix_spawn_file_actions_addclose(&actions, fds[1]);
+    posix_spawnattr_t attr; posix_spawnattr_init(&attr);
+    posix_spawnattr_set_persona_np(&attr, 99, 1);
+    posix_spawnattr_set_persona_uid_np(&attr, 0);
+    posix_spawnattr_set_persona_gid_np(&attr, 0);
+    const char *binary = NSBundle.mainBundle.executablePath.fileSystemRepresentation;
+    char *argv[] = {(char *)binary, remove ? "--remove-lab-plugins" : "--install-lab-plugins", NULL};
+    pid_t pid = 0; int r = posix_spawn(&pid, binary, &actions, &attr, argv, environ);
+    posix_spawnattr_destroy(&attr); posix_spawn_file_actions_destroy(&actions); close(fds[1]);
+    if (r) { close(fds[0]); return @{@"ok": @NO, @"spawn_error": @(r)}; }
+    int status = 0; BOOL timedOut = NO; pid_t waited = 0;
+    NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + 20;
+    do {
+        waited = waitpid(pid, &status, WNOHANG);
+        if (waited == pid || (waited < 0 && errno != EINTR)) break;
+        if (NSProcessInfo.processInfo.systemUptime >= deadline) {
+            timedOut = YES; kill(pid, SIGKILL);
+            while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+            break;
+        }
+        usleep(20000);
+    } while (YES);
+    NSFileHandle *handle = [[NSFileHandle alloc] initWithFileDescriptor:fds[0] closeOnDealloc:YES];
+    NSData *data = [handle readDataToEndOfFile];
+    NSDictionary *result = data.length ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
+    if (timedOut || !result) return @{@"ok": @NO, @"timed_out": @(timedOut), @"wait_status": @(status)};
+    return result;
+#endif
+}
+
+@interface PLResults : NSObject
++ (void)record:(NSString *)name value:(NSDictionary *)value;
++ (NSDictionary *)all;
+@end
+@implementation PLResults
+static NSMutableDictionary *PLRecords;
++ (void)record:(NSString *)name value:(NSDictionary *)value {
+    @synchronized(self) { if (!PLRecords) PLRecords = [NSMutableDictionary dictionary]; PLRecords[name] = value; }
+    PLLog(name, value);
+}
++ (NSDictionary *)all { @synchronized(self) { return PLRecords.copy ?: @{}; } }
+@end
+
+@interface PLProbe : NSObject
+- (NSInteger)calculate:(NSInteger)value;
+- (NSDictionary *)fileProbe;
+@end
+@implementation PLProbe
+- (NSInteger)calculate:(NSInteger)value { return value * 2; }
+- (NSDictionary *)fileProbe { return @{@"ok": @NO, @"reason": @"file-plugin-not-loaded"}; }
+@end
+
+@interface PLViewController : UIViewController
+@property (nonatomic, strong) UILabel *pluginBadge;
+@property (nonatomic, strong) UILabel *statusLabel;
+@property (nonatomic, strong) UIStackView *rows;
+@property (nonatomic, strong) UIButton *runButton;
+@property (nonatomic, strong) UIButton *removeButton;
+@property (nonatomic) BOOL didRun;
+- (void)renderPluginSlot;
+@end
+@implementation PLViewController
+- (UILabel *)label:(NSString *)text size:(CGFloat)size {
+    UILabel *v = [UILabel new]; v.text = text; v.font = [UIFont systemFontOfSize:size]; v.numberOfLines = 0; return v;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad]; self.view.backgroundColor = UIColor.systemGroupedBackgroundColor;
+    UIScrollView *scroll = [UIScrollView new]; scroll.translatesAutoresizingMaskIntoConstraints = NO; [self.view addSubview:scroll];
+    UIStackView *stack = [UIStackView new]; stack.axis = UILayoutConstraintAxisVertical; stack.spacing = 18;
+    stack.translatesAutoresizingMaskIntoConstraints = NO; [scroll addSubview:stack];
+    [NSLayoutConstraint activateConstraints:@[
+        [scroll.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor], [scroll.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor],
+        [scroll.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor], [scroll.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+        [stack.topAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.topAnchor constant:28], [stack.bottomAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.bottomAnchor constant:-28],
+        [stack.leadingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.leadingAnchor constant:24], [stack.trailingAnchor constraintEqualToAnchor:scroll.contentLayoutGuide.trailingAnchor constant:-24],
+        [stack.widthAnchor constraintEqualToAnchor:scroll.frameLayoutGuide.widthAnchor constant:-48]]];
+    UILabel *title = [self label:@"插件实验室" size:32]; title.font = [UIFont boldSystemFontOfSize:32]; [stack addArrangedSubview:title];
+    [stack addArrangedSubview:[self label:@"五个独立工程 · 不重启功能测试" size:17]];
+    self.statusLabel = [self label:@"准备就绪，点击运行后逐项检查。" size:16]; [stack addArrangedSubview:self.statusLabel];
+    self.pluginBadge = [self label:@"尚未加载 UI 插件" size:17]; [stack addArrangedSubview:self.pluginBadge];
+    self.rows = [UIStackView new]; self.rows.axis = UILayoutConstraintAxisVertical; self.rows.spacing = 14; [stack addArrangedSubview:self.rows];
+    for (NSString *name in @[@"动态库加载", @"方法拦截与返回值", @"界面修改", @"文件写入、读取与清理", @"通知与回调"]) [self.rows addArrangedSubview:[self label:[@"○  " stringByAppendingString:name] size:17]];
+    self.runButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.runButton.configuration = [UIButtonConfiguration filledButtonConfiguration]; [self.runButton setTitle:@"运行五项测试" forState:UIControlStateNormal];
+    [self.runButton addTarget:self action:@selector(runTests) forControlEvents:UIControlEventTouchUpInside]; [stack addArrangedSubview:self.runButton];
+    self.removeButton = [UIButton buttonWithType:UIButtonTypeSystem]; [self.removeButton setTitle:@"移除这五个测试插件" forState:UIControlStateNormal];
+    [self.removeButton addTarget:self action:@selector(removePlugins) forControlEvents:UIControlEventTouchUpInside]; [stack addArrangedSubview:self.removeButton];
+    UILabel *note = [self label:@"本实验使用 App 内定向加载。插件只作用于本 App；全局自动注入需要另行验证。文件测试仅使用本 App 的临时测试文件。" size:14]; note.textColor = UIColor.secondaryLabelColor; [stack addArrangedSubview:note];
+    PLLog(@"launch", @{@"build": NSBundle.mainBundle.infoDictionary[@"CFBundleVersion"], @"boot": PLBootSnapshot(), @"preloaded_plugins": [PLResults all]});
+    NSString *mode = NSProcessInfo.processInfo.environment[@"PLUGINLAB_MODE"];
+    if ([mode isEqual:@"run"]) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{ [self runTests]; });
+    if ([mode isEqual:@"remove"]) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{ [self removePlugins]; });
+}
+- (void)renderPluginSlot { self.pluginBadge.text = @"尚未加载 UI 插件"; }
+- (void)removePlugins {
+    self.runButton.enabled = NO; self.removeButton.enabled = NO;
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSDictionary *result = PLRunInstaller(YES); PLLog(@"uninstall", result);
+        dispatch_async(dispatch_get_main_queue(), ^{ self.statusLabel.text = [result[@"ok"] boolValue] ? @"测试插件文件已移除。重新打开本 App 后已加载代码才会退出。" : [NSString stringWithFormat:@"移除未完成：%@", result]; self.removeButton.enabled = YES; });
+    });
+}
+- (void)runTests {
+    if (self.didRun) return; self.didRun = YES; self.runButton.enabled = NO; self.removeButton.enabled = NO;
+    PLProbe *probe = [PLProbe new];
+    NSDictionary *beforeBoot = PLBootSnapshot();
+    [self renderPluginSlot];
+    NSDictionary *baseline = @{@"method_values": @[@([probe calculate:11]), @([probe calculate:0]), @([probe calculate:-3])],
+        @"file": [probe fileProbe], @"ui_text": self.pluginBadge.text ?: @"", @"records": [PLResults all]};
+    PLLog(@"baseline", baseline); self.statusLabel.text = @"正在准备独立插件并检查签名信任…";
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSDictionary *installed = PLRunInstaller(NO); PLLog(@"install", installed);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSMutableArray *loads = [NSMutableArray array];
+            void *loadHandle = NULL;
+            if ([installed[@"ok"] boolValue]) {
+                for (NSString *name in PLNames()) {
+                    NSString *path = [PLPluginDirectory() stringByAppendingPathComponent:[name stringByAppendingString:@".dylib"]];
+                    dlerror(); void *h = dlopen(path.fileSystemRepresentation, RTLD_NOW | RTLD_GLOBAL); const char *error = dlerror();
+                    if ([name isEqual:PLNames().firstObject]) loadHandle = h;
+                    NSDictionary *item = @{@"name": name, @"path": path, @"ok": @(h != NULL), @"error": error ? @(error) : @""};
+                    [loads addObject:item]; PLLog(@"library", item);
+                    // Handles stay open while installed hooks reference these images.
+                }
+            }
+            [self renderPluginSlot];
+            NSArray *methodValues = @[@([probe calculate:11]), @([probe calculate:0]), @([probe calculate:-3])];
+            NSDictionary *file = [probe fileProbe];
+            NSString *nonce = NSUUID.UUID.UUIDString;
+            [NSNotificationCenter.defaultCenter postNotificationName:@"com.mmd.PluginLab.Ping" object:nil userInfo:@{@"nonce": nonce}];
+            NSDictionary *records = [PLResults all];
+            int (*marker)(void) = loadHandle ? dlsym(loadHandle, "PLLoadProbeMarker") : NULL;
+            NSArray *checks = @[
+                @{@"id": @"load", @"passed": @(marker && marker() == 20261002 && [records[@"load"][@"loaded"] boolValue])},
+                @{@"id": @"method", @"passed": @([methodValues isEqual:@[@29, @7, @1]]), @"values": methodValues},
+                @{@"id": @"ui", @"passed": @([self.pluginBadge.text isEqual:@"独立 UI 插件已加载"] && [self.pluginBadge.accessibilityIdentifier isEqual:@"PluginLab.UIProbe.Active"])},
+                @{@"id": @"file", @"passed": @([file[@"ok"] boolValue]), @"detail": file},
+                @{@"id": @"notification", @"passed": @([records[@"notification"][@"nonce"] isEqual:nonce])}];
+            NSDictionary *afterBoot = PLBootSnapshot();
+            BOOL noReboot = beforeBoot[@"boot_uuid"] && [beforeBoot[@"boot_uuid"] isEqual:afterBoot[@"boot_uuid"]] && beforeBoot[@"springboard"] && [beforeBoot[@"springboard"] isEqual:afterBoot[@"springboard"]];
+            BOOL baselineClean = [baseline[@"method_values"] isEqual:@[@22, @0, @-6]] && ![baseline[@"file"][@"ok"] boolValue] && ![baseline[@"records"] count] && [baseline[@"ui_text"] isEqual:@"尚未加载 UI 插件"];
+            NSUInteger count = 0;
+            NSArray *labels = @[@"动态库加载", @"方法拦截与返回值", @"界面修改", @"文件写入、读取与清理", @"通知与回调"];
+            for (NSUInteger i = 0; i < checks.count; i++) {
+                BOOL passed = [checks[i][@"passed"] boolValue]; count += passed;
+                ((UILabel *)self.rows.arrangedSubviews[i]).text = [NSString stringWithFormat:@"%@  %@", passed ? @"✓" : @"✕", labels[i]];
+                PLLog(@"check", checks[i]);
+            }
+            NSDictionary *summary = @{@"mode": @"explicit-app-scoped-dlopen", @"simulator": @(TARGET_OS_SIMULATOR), @"passed": @(count), @"total": @5, @"clean_baseline": @(baselineClean), @"same_kernel_and_springboard": @(noReboot), @"global_automatic_injection_verified": @NO};
+            PLLog(@"before_boot", beforeBoot); PLLog(@"after_boot", afterBoot); PLLog(@"summary", summary);
+            NSDictionary *report = @{@"summary": summary, @"baseline": baseline, @"install": installed, @"loads": loads, @"checks": checks, @"before_boot": beforeBoot, @"after_boot": afterBoot};
+            NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
+            NSString *path = [documents stringByAppendingPathComponent:[NSString stringWithFormat:@"PluginLab-%@.json", NSUUID.UUID.UUIDString]];
+            NSData *json = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:nil];
+            NSError *error = nil; BOOL saved = [json writeToFile:path options:NSDataWritingAtomic error:&error];
+            PLLog(@"report", @{@"saved": @(saved), @"path": path, @"error": error.localizedDescription ?: @""});
+            self.statusLabel.text = [NSString stringWithFormat:@"%lu / 5 项通过\n%@\n%@", (unsigned long)count, noReboot ? @"系统和桌面均未重启" : @"重启状态需通过外部记录核对", baselineClean ? @"已对比插件加载前后的行为" : @"起始状态已有插件，需重新核对基线"];
+            self.removeButton.enabled = YES;
+        });
+    });
+}
+@end
+
+@interface PLAppDelegate : UIResponder <UIApplicationDelegate>
+@property (nonatomic, strong) UIWindow *window;
+@end
+@implementation PLAppDelegate
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)options {
+    self.window = [[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];
+    self.window.rootViewController = [PLViewController new]; [self.window makeKeyAndVisible]; return YES;
+}
+@end
+int main(int argc, char **argv) {
+    @autoreleasepool {
+        if (argc == 2 && (!strcmp(argv[1], "--install-lab-plugins") || !strcmp(argv[1], "--remove-lab-plugins"))) {
+            NSDictionary *result = PLInstall(!strcmp(argv[1], "--remove-lab-plugins"));
+            NSData *data = [NSJSONSerialization dataWithJSONObject:result options:0 error:nil];
+            fwrite(data.bytes, 1, data.length, stdout); fflush(stdout); return [result[@"ok"] boolValue] ? 0 : 1;
+        }
+        return UIApplicationMain(argc, argv, nil, NSStringFromClass(PLAppDelegate.class));
+    }
+}
