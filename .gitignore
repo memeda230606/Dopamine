@@ -12,6 +12,14 @@ xcshareddata/
 Application/Dopamine.xcodeproj/xcshareddata/**
 !Application/Dopamine.xcodeproj/xcshareddata/xcschemes/
 !Application/Dopamine.xcodeproj/xcshareddata/xcschemes/DopamineCore.xcscheme
+!LaoHeMa/LaoHeMa.xcodeproj/xcshareddata/
+LaoHeMa/LaoHeMa.xcodeproj/xcshareddata/**
+!LaoHeMa/LaoHeMa.xcodeproj/xcshareddata/xcschemes/
+!LaoHeMa/LaoHeMa.xcodeproj/xcshareddata/xcschemes/LaoHeMa.xcscheme
+!LaoHeMa/LaoHeMa.xcodeproj/project.xcworkspace/xcshareddata/
+LaoHeMa/LaoHeMa.xcodeproj/project.xcworkspace/xcshareddata/**
+!LaoHeMa/LaoHeMa.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+!LaoHeMa/LaoHeMa.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
 DerivedData/
 .swiftpm/xcode/
 /Package.resolved
