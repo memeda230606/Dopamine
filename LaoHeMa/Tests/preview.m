@@ -36,7 +36,7 @@ static void collectButtons(UIView *view, NSMutableArray *buttons) {
         NSCAssert(CGRectContainsRect(view.view.bounds, frame), @"Button fits viewport");
         NSCAssert(button.enabled == (controller.state == LMStateReady), @"State gating");
         BOOL pad = UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad;
-        if (controller.state == LMStateReady) NSCAssert([button.configuration.title isEqual:pad ? @"解放 iPad" : @"解放 iPhone"], @"Device-specific copy");
+        if (controller.state == LMStateReady) NSCAssert([button.configuration.title isEqual:@"测试"], @"Ready copy");
         NSDictionary *result = @{@"passed":@YES, @"phase":phase, @"button_count":@(buttons.count), @"title":button.configuration.title, @"enabled":@(button.enabled), @"ipad":@(pad), @"width":@(view.view.bounds.size.width)};
         NSString *docs = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
         [[NSJSONSerialization dataWithJSONObject:result options:0 error:nil] writeToFile:[docs stringByAppendingPathComponent:@"ui-result.json"] atomically:YES];

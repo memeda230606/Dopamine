@@ -51,8 +51,7 @@
 - (void)render {
     LMState state = self.controller.state;
     BOOL running = state == LMStateRunning || state == LMStateFinishing;
-    NSString *readyTitle = UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad ? @"解放 iPad" : @"解放 iPhone";
-    NSArray *titles = @[readyTitle, @"正在解放", @"已解放", @"暂不支持", @"请重新打开", @"准备环境", @"正在完成"];
+    NSArray *titles = @[@"测试", @"测试中", @"ok", @"暂不支持", @"请重新打开", @"准备环境", @"正在完成"];
     UIButtonConfiguration *config = self.button.configuration;
     config.title = titles[state];
     config.cornerStyle = UIButtonConfigurationCornerStyleCapsule;

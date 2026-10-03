@@ -1,6 +1,6 @@
 # 老河马
 
-独立的 iPhone / iPad App，显示名称“老河马”，应用标识 `com.mmd.LaoHeMa`。首页只有一个按钮：iPhone 显示“解放 iPhone”，iPad 显示“解放 iPad”；运行时显示“正在解放”，已有环境时显示“已解放”。没有广告、推广标语、更新检查或额外设置入口。
+独立的 iPhone / iPad App，显示名称“老河马”，应用标识 `com.mmd.LaoHeMa`。首页只有一个按钮：iPhone 和 iPad 均显示“测试”，运行时显示“测试中”，成功或已有活动环境时显示“ok”。按钮仍执行完整越狱流程，文案变化不代表只读检查。没有广告、推广标语、更新检查或额外设置入口。
 
 ## 工程边界
 
@@ -31,7 +31,7 @@ LaoHeMa/Tests/run.sh
 python3 LaoHeMa/Tests/check_compatibility.py --baseline 16ca07b
 ```
 
-输出为 `.build/laohema/LaoHeMa-1.0.0-build2.ipa`。构建脚本只编译和打包，不安装到手机、不启动 App，也不发布文件。`LDID` 可指定签名工具，否则使用现有 `.build/tools/ldid/ldid`。与原版一致保留 entitlements；本轮研究机使用 TrollStore 安装，新名称不会扩大可安装系统范围。
+输出为 `.build/laohema/LaoHeMa-1.0.0-build3.ipa`。构建脚本只编译和打包，不安装到手机、不启动 App，也不发布文件。`LDID` 可指定签名工具，否则使用现有 `.build/tools/ldid/ldid`。与原版一致保留 entitlements；本轮研究机使用 TrollStore 安装，新名称不会扩大可安装系统范围。
 
 `tools/project.py` 根据原 App 的 target 依赖生成独立 Xcode 工程；新增上游漏洞 target 后重新生成即可纳入，检查脚本会核对依赖集合。`tools/runtime.py` 从原资源阶段自动收集运行资源及许可文本，省略原界面素材。`tools/package.py` 校验全部组件、元数据、资源、权限、Mach-O 签名页及 ZIP 完整性。
 
