@@ -112,6 +112,8 @@
     }
 }
 - (NSString *)resourceError {
+    if (![NSString instancesRespondToSelector:NSSelectorFromString(@"numericalVersionRepresentation")])
+        return @"核心组件不完整，请重新安装。";
     NSDictionary *manifest = [NSDictionary dictionaryWithContentsOfFile:[self.resourceDirectory stringByAppendingPathComponent:@"RuntimeManifest.plist"]];
     if (![manifest[@"required_files"] count]) return @"运行资源清单缺失，请重新安装。";
     for (NSString *path in manifest[@"required_files"]) {
@@ -123,6 +125,7 @@
 - (void)recordDiagnostics {
     NSMutableDictionary *report = [[DOCoreDiagnostics environmentReport] mutableCopy];
     report[@"resources_complete"] = @([self resourceError] == nil);
+    report[@"version_comparison_available"] = @([NSString instancesRespondToSelector:NSSelectorFromString(@"numericalVersionRepresentation")]);
     report[@"ui_version"] = NSBundle.mainBundle.infoDictionary[@"CFBundleShortVersionString"];
     report[@"runtime_version"] = self.applicationVersion;
     report[@"supported"] = @([DOEnvironmentManager sharedManager].isSupported);

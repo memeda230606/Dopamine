@@ -31,7 +31,7 @@ LaoHeMa/Tests/run.sh
 python3 LaoHeMa/Tests/check_compatibility.py --baseline 16ca07b
 ```
 
-输出为 `.build/laohema/LaoHeMa-1.0.0-build1.ipa`。构建脚本只编译和打包，不安装到手机、不启动 App，也不发布文件。`LDID` 可指定签名工具，否则使用现有 `.build/tools/ldid/ldid`。与原版一致保留 entitlements；本轮研究机使用 TrollStore 安装，新名称不会扩大可安装系统范围。
+输出为 `.build/laohema/LaoHeMa-1.0.0-build2.ipa`。构建脚本只编译和打包，不安装到手机、不启动 App，也不发布文件。`LDID` 可指定签名工具，否则使用现有 `.build/tools/ldid/ldid`。与原版一致保留 entitlements；本轮研究机使用 TrollStore 安装，新名称不会扩大可安装系统范围。
 
 `tools/project.py` 根据原 App 的 target 依赖生成独立 Xcode 工程；新增上游漏洞 target 后重新生成即可纳入，检查脚本会核对依赖集合。`tools/runtime.py` 从原资源阶段自动收集运行资源及许可文本，省略原界面素材。`tools/package.py` 校验全部组件、元数据、资源、权限、Mach-O 签名页及 ZIP 完整性。
 
@@ -41,7 +41,9 @@ python3 LaoHeMa/Tests/check_compatibility.py --baseline 16ca07b
 
 2026-10-02：独立 App 构建、签名与包完整性检查通过。9 个组件、11 个变体的兼容元数据与上游源文件一致；六个核心流程/兼容源码与基线提交 `16ca07b` 逐字节相同。控制器测试覆盖重复点击、已有环境、不支持设备、资源缺失、点击前复查、准备流程取消、错误后的禁用和成功收尾策略。
 
-模拟器只使用真实 UI 和空实现控制器，未链接越狱核心；用于检查 iPhone/iPad 文案、按钮数量、可见范围与状态，不能当作对应芯片的越狱测试。新 IPA 的手机安装、只读验收及冷启动后的完整流程仍待完成；没有声称全部支持机型已逐一真机验证。
+模拟器只使用真实 UI 和空实现控制器，未链接越狱核心；用于检查 iPhone/iPad 文案、按钮数量、可见范围与状态，不能当作对应芯片的越狱测试。build 1 已在 iPhone 13／iOS 16.2 完成安装和只读验收。随后从未越狱状态执行时，在 bootstrap 包版本比较处因缺少 `NSString (Version)` 实现而崩溃；已有活动环境让重新打开后的按钮显示“已解放”，但完整收尾和用户空间重启尚未完成。
+
+2026-10-03：build 2 将原有 `NSString+Version.m` 纳入共享核心，保留 `-ObjC` 分类加载，同时从原 App 的源文件阶段移除，避免重复编译。打包和核心边界检查要求实际方法实现存在；启动前也验证方法可用，缺失时阻止执行。只读诊断新增 `version_comparison_available`。已通过构建、签名、资源、核心边界、控制器和兼容配置检查；静态库分类加载回归测试通过，旧 build 1 的二进制会被新增打包检查拒绝。不更改原有漏洞算法和兼容判断；build 2 完整流程仍待真机复测，没有声称全部支持机型已逐一真机验证。
 
 ## 许可
 

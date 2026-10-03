@@ -14,7 +14,9 @@ def sources(target):
  return result
 core=sources(targets['DopamineCore']);app=sources(targets['Dopamine'])
 assert not core & app,core & app
-assert {'DOJailbreaker.m','DOEnvironmentManager.m','DOBootstrapper.m','DOExploit.m','DOExploitManager.m','DOCore.m','DOCoreDiagnostics.m'}<=core
+assert {'DOJailbreaker.m','DOEnvironmentManager.m','DOBootstrapper.m','DOExploit.m','DOExploitManager.m','DOCore.m','DOCoreDiagnostics.m','NSString+Version.m'}<=core
+defined=subprocess.check_output(['nm','--defined-only',str(a.library)],text=True)
+assert re.search(r' [tT] -\[NSString\(Version\) numericalVersionRepresentation\]$',defined,re.M), 'Core must contain the version-comparison category implementation'
 assert 'DOPreferenceManager.m' not in core and 'DOAppCoreHost.m' in app
 undefined=subprocess.check_output(['nm','-u',str(a.library)],text=True)
 for symbol in ['DOUIManager','DOPreferenceManager','DOAppCoreHost','UIImage','UIApplication','UIView']:

@@ -12,7 +12,7 @@
 - `DOCoreDiagnostics`：只读检查已有状态、资源发现、漏洞选择和运行策略，不执行漏洞、不安装环境、不重启。
 - Xcode `DopamineCore` target：生成 `libDopamineCore.a`。原 App 链接静态库，核心源文件不再同时编进 App target。
 
-核心实现暂时保留在 `Application/Dopamine/Jailbreak` 原路径，降低文件迁移对上游合并的影响；由新 target 编译。`DOPreferenceManager` 留在 App 层。`NSData+Hex.m` 和 `clock_alarm.c` 为核心所需支持代码。
+核心实现暂时保留在 `Application/Dopamine/Jailbreak` 原路径，降低文件迁移对上游合并的影响；由新 target 编译。`DOPreferenceManager` 留在 App 层。`NSData+Hex.m`、`NSString+Version.m` 和 `clock_alarm.c` 为核心所需支持代码。宿主链接时必须保留 `-ObjC`，以加载静态库中的 Objective-C 分类实现。
 
 核心源码不导入 UIKit、DOUIManager、DOPreferenceManager，不直接访问 NSBundle.mainBundle。底层 iOS 私有框架、libjailbreak、XPF、资源包以及签名/启动条件仍然必需；静态库不是任意普通 App 可直接使用的越狱授权。
 

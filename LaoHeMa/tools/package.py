@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import plistlib
+import re
 import shutil
 import struct
 import subprocess
@@ -56,6 +57,9 @@ def package():
     assert b'DOCoreContext' in binary.read_bytes() and b'LMCoreHost' in binary.read_bytes()
     assert b'DOUIManager' not in binary.read_bytes() and b'DOPreferenceManager' not in binary.read_bytes()
     assert b'[NOREBOOT_TEST]' not in binary.read_bytes(), 'The complete-flow app must not link the experimental core'
+    # A selector reference alone does not provide its Objective-C category implementation.
+    symbols = subprocess.check_output(['nm', '--defined-only', str(binary)], text=True)
+    assert re.search(r' [tT] -\[NSString\(Version\) numericalVersionRepresentation\]$', symbols, re.M), 'Missing bootstrap version-comparison implementation'
     project = upstream(); expected = {v['name'] + '.framework' for v in components(project).values() if v['productType'] == 'com.apple.product-type.framework'}
     assert {p.name for p in (app / 'Frameworks').glob('*.framework')} == expected
     variants = 0; metadata = {}
