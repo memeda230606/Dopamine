@@ -1,6 +1,6 @@
 #import "LMCoreHost.h"
-#import "DOCoreDiagnostics.h"
-#import "DOEnvironmentManager.h"
+
+#import "DOEngine.h"
 #import <os/log.h>
 #import <fcntl.h>
 #import <unistd.h>
@@ -42,8 +42,7 @@
         snapshot[@"bootlogoEnabled"] = @NO;
         snapshot[@"appJITEnabled"] = @YES;
         // Preserve an existing safe-mode choice; a fresh bootstrap uses upstream defaults.
-        DOEnvironmentManager *environment = [DOEnvironmentManager sharedManager];
-        snapshot[@"tweakInjectionEnabled"] = @(!environment.isBootstrapped || environment.isTweakInjectionEnabled);
+        snapshot[@"tweakInjectionEnabled"] = @(!DOEngine.isBootstrapped || DOEngine.isTweakInjectionEnabled);
         return snapshot;
     }
 }
@@ -123,13 +122,13 @@
     return nil;
 }
 - (void)recordDiagnostics {
-    NSMutableDictionary *report = [[DOCoreDiagnostics environmentReport] mutableCopy];
+    NSMutableDictionary *report = [DOEngine.diagnostics mutableCopy];
     report[@"resources_complete"] = @([self resourceError] == nil);
     report[@"version_comparison_available"] = @([NSString instancesRespondToSelector:NSSelectorFromString(@"numericalVersionRepresentation")]);
     report[@"ui_version"] = NSBundle.mainBundle.infoDictionary[@"CFBundleShortVersionString"];
     report[@"runtime_version"] = self.applicationVersion;
-    report[@"supported"] = @([DOEnvironmentManager sharedManager].isSupported);
-    report[@"environment_active"] = @([DOEnvironmentManager sharedManager].isJailbroken || [DOEnvironmentManager sharedManager].isJailbrokenWithOtherJailbreak);
+    report[@"supported"] = @(DOEngine.isSupported);
+    report[@"environment_active"] = @(DOEngine.isActive);
     NSData *data = [NSJSONSerialization dataWithJSONObject:report options:0 error:nil];
     [self log:[@"[LAOHEMA_DIAGNOSTICS] " stringByAppendingString:[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]] debug:YES update:NO];
 }

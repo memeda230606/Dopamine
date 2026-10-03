@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Build the isolated test host using cached, official runtime packages."""
+import sys
 import base64, hashlib, json, os, plistlib, re, shutil, subprocess, zipfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
+sys.path.insert(0,str(ROOT.parent/'RuntimeClient'))
+from build import configure
 CACHE=Path(os.environ.get('RESEARCH_ASSETS', ROOT.parent/'.build/research-assets'))
 KEY=Path(os.environ.get('RESEARCH_CLIENT_PUBLIC_KEY', ROOT.parent/'.build/research-private/client_key.pub'))
 OUT=ROOT/'build'; APP=OUT/'ResearchLab.app'; APP.mkdir(parents=True,exist_ok=True)
@@ -44,21 +47,21 @@ for source,path,executable in files:
 (APP/'payload.json').write_text(json.dumps(manifest))
 shutil.copyfile(KEY,APP/'client.pub')
 info={'CFBundleIdentifier':'com.mmd.ResearchLab','CFBundleExecutable':'ResearchLab','CFBundlePackageType':'APPL',
-      'CFBundleName':'ResearchLab','CFBundleDisplayName':'权限实验室','CFBundleVersion':'2','CFBundleShortVersionString':'1.0.0',
+      'CFBundleName':'ResearchLab','CFBundleDisplayName':'权限实验室','CFBundleVersion':'3','CFBundleShortVersionString':'1.0.0',
       'MinimumOSVersion':'15.0','UIDeviceFamily':[1,2],'UILaunchScreen':{},'UIFileSharingEnabled':True,
       'UISupportedInterfaceOrientations':['UIInterfaceOrientationPortrait']}
 (APP/'Info.plist').write_bytes(plistlib.dumps(info))
 sdk=subprocess.check_output(['xcrun','--sdk','iphoneos','--show-sdk-path'],text=True).strip()
 with (OUT/'build.log').open('w') as log:
     subprocess.run(['xcrun','clang','-target','arm64-apple-ios15.0','-isysroot',sdk,'-fobjc-arc','-fblocks','-O0',
-                    '-Wl,-export_dynamic','-framework','UIKit','-framework','Foundation',str(ROOT/'App/main.m'),'-o',str(APP/'ResearchLab')],stdout=log,stderr=subprocess.STDOUT,check=True)
+                    '-Wl,-export_dynamic','-framework','UIKit','-framework','Foundation',str(ROOT/'App/main.m'),*configure(APP),'-o',str(APP/'ResearchLab')],stdout=log,stderr=subprocess.STDOUT,check=True)
 subprocess.run(['codesign','--force','--sign','-','--entitlements',str(ROOT/'App/ResearchLab.entitlements'),str(APP)],check=True)
 subprocess.run(['codesign','--verify','--strict',str(APP)],check=True)
-ipa=OUT/'ResearchLab-1.0.0-build2.ipa'
+ipa=OUT/'ResearchLab-1.0.0-build3.ipa'
 with zipfile.ZipFile(ipa,'w',compression=zipfile.ZIP_DEFLATED) as z:
     for file in APP.rglob('*'):
         if file.is_file():z.write(file,'Payload/ResearchLab.app/'+str(file.relative_to(APP)))
-metadata={'app':ipa.name,'sha256':hashlib.sha256(ipa.read_bytes()).hexdigest(),'bytes':ipa.stat().st_size,'build':'2',
+metadata={'app':ipa.name,'sha256':hashlib.sha256(ipa.read_bytes()).hexdigest(),'bytes':ipa.stat().st_size,'build':'3',
  'frida_version':'17.0.7','openssh_version':'9.7p1-1','device_test':'pending_installation',
  'kernel_write_tested':False,'files':[{k:v for k,v in f.items() if k!='data'} for f in manifest['files']],
  'existing_dependencies':manifest['existing_dependencies']}

@@ -2,6 +2,10 @@
 #import "LMJailbreakController.h"
 #import "DOEnvironmentManager.h"
 #import "DOJailbreaker.h"
+#import "DOCoreDiagnostics.h"
+@implementation DOCoreDiagnostics
++ (NSDictionary *)environmentReport { return @{}; }
+@end
 #import <CoreFoundation/CoreFoundation.h>
 #import <dispatch/dispatch.h>
 

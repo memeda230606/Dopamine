@@ -535,19 +535,19 @@
 		7CD8FC393022AADF00AF864E /* momentarius_a13.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = momentarius_a13.c; sourceTree = "<group>"; };
 		7CD8FC3A3022AADF00AF864E /* utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = utils.h; sourceTree = "<group>"; };
 		7CD8FC3B3022AADF00AF864E /* utils.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = utils.c; sourceTree = "<group>"; };
-		8614E355301AB63E00B1B88C /* DOBootstrapper+zstd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DOBootstrapper+zstd.h"; sourceTree = "<group>"; };
-		8614E356301AB63E00B1B88C /* DOBootstrapper+zstd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "DOBootstrapper+zstd.m"; sourceTree = "<group>"; };
+		8614E355301AB63E00B1B88C /* DOBootstrapper+zstd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/Implementation/DOBootstrapper+zstd.h"; sourceTree = SOURCE_ROOT; };
+		8614E356301AB63E00B1B88C /* DOBootstrapper+zstd.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "../DopamineCore/Implementation/DOBootstrapper+zstd.m"; sourceTree = SOURCE_ROOT; };
 		8BC6950EB811C9F9D9419207 /* DOAppCoreHost.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = DOAppCoreHost.h; sourceTree = "<group>"; };
-		8C029F412B4DFD5D0071DE58 /* DOExploitManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DOExploitManager.h; sourceTree = "<group>"; };
-		8C029F422B4DFD5D0071DE58 /* DOExploitManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DOExploitManager.m; sourceTree = "<group>"; };
-		8C029F442B4DFD910071DE58 /* DOBootstrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DOBootstrapper.h; sourceTree = "<group>"; };
-		8C029F452B4DFD910071DE58 /* DOBootstrapper.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DOBootstrapper.m; sourceTree = "<group>"; };
-		8C029F4C2B4E1FF30071DE58 /* DOExploit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DOExploit.h; sourceTree = "<group>"; };
-		8C029F4D2B4E1FF30071DE58 /* DOExploit.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DOExploit.m; sourceTree = "<group>"; };
-		8C029F5E2B4E25350071DE58 /* DOEnvironmentManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DOEnvironmentManager.h; sourceTree = "<group>"; };
-		8C029F5F2B4E25350071DE58 /* DOEnvironmentManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DOEnvironmentManager.m; sourceTree = "<group>"; };
-		8C029F612B4E2E140071DE58 /* DOJailbreaker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DOJailbreaker.h; sourceTree = "<group>"; };
-		8C029F622B4E2E140071DE58 /* DOJailbreaker.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DOJailbreaker.m; sourceTree = "<group>"; };
+		8C029F412B4DFD5D0071DE58 /* DOExploitManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/Implementation/DOExploitManager.h"; sourceTree = SOURCE_ROOT; };
+		8C029F422B4DFD5D0071DE58 /* DOExploitManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "../DopamineCore/Implementation/DOExploitManager.m"; sourceTree = SOURCE_ROOT; };
+		8C029F442B4DFD910071DE58 /* DOBootstrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/Implementation/DOBootstrapper.h"; sourceTree = SOURCE_ROOT; };
+		8C029F452B4DFD910071DE58 /* DOBootstrapper.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "../DopamineCore/Implementation/DOBootstrapper.m"; sourceTree = SOURCE_ROOT; };
+		8C029F4C2B4E1FF30071DE58 /* DOExploit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/Implementation/DOExploit.h"; sourceTree = SOURCE_ROOT; };
+		8C029F4D2B4E1FF30071DE58 /* DOExploit.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "../DopamineCore/Implementation/DOExploit.m"; sourceTree = SOURCE_ROOT; };
+		8C029F5E2B4E25350071DE58 /* DOEnvironmentManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/Implementation/DOEnvironmentManager.h"; sourceTree = SOURCE_ROOT; };
+		8C029F5F2B4E25350071DE58 /* DOEnvironmentManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "../DopamineCore/Implementation/DOEnvironmentManager.m"; sourceTree = SOURCE_ROOT; };
+		8C029F612B4E2E140071DE58 /* DOJailbreaker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/Implementation/DOJailbreaker.h"; sourceTree = SOURCE_ROOT; };
+		8C029F622B4E2E140071DE58 /* DOJailbreaker.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "../DopamineCore/Implementation/DOJailbreaker.m"; sourceTree = SOURCE_ROOT; };
 		8C029F652B4E2E7D0071DE58 /* libcompression.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcompression.tbd; path = usr/lib/libcompression.tbd; sourceTree = SDKROOT; };
 		8C029F672B4E31D50071DE58 /* libMobileGestalt.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libMobileGestalt.tbd; path = usr/lib/libMobileGestalt.tbd; sourceTree = SDKROOT; };
 		8C029F6A2B4E320E0071DE58 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
@@ -588,9 +588,9 @@
 		8C3B2DEE301BC05200C979A6 /* ClearSword.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ClearSword.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8C3B2E01301BC1B100C979A6 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.2.sdk/System/Library/Frameworks/IOKit.framework; sourceTree = DEVELOPER_DIR; };
 		8C3B2E03301BC1F400C979A6 /* libjailbreak.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libjailbreak.dylib; path = ../BaseBin/libjailbreak/libjailbreak.dylib; sourceTree = "<group>"; };
-		8C46D71E2B588875002899DB /* zstd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zstd.h; sourceTree = "<group>"; };
-		8C46D71F2B588875002899DB /* zstd_errors.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zstd_errors.h; sourceTree = "<group>"; };
-		8C46D7202B588875002899DB /* zdict.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = zdict.h; sourceTree = "<group>"; };
+		8C46D71E2B588875002899DB /* zstd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/PrivateHeaders/zstd.h"; sourceTree = SOURCE_ROOT; };
+		8C46D71F2B588875002899DB /* zstd_errors.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/PrivateHeaders/zstd_errors.h"; sourceTree = SOURCE_ROOT; };
+		8C46D7202B588875002899DB /* zdict.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/PrivateHeaders/zdict.h"; sourceTree = SOURCE_ROOT; };
 		8C4ABEBC2B52274300B43C9B /* DOPreferenceManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DOPreferenceManager.h; sourceTree = "<group>"; };
 		8C4ABEBD2B52274300B43C9B /* DOPreferenceManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DOPreferenceManager.m; sourceTree = "<group>"; };
 		8C512B8B2B5C9DE800C6F14A /* sileo.deb */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = sileo.deb; sourceTree = "<group>"; };
@@ -674,8 +674,8 @@
 		8C5FA9702BDD81EF008C246F /* LICENSE_weightBufs.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = LICENSE_weightBufs.md; sourceTree = "<group>"; };
 		8C5FF1C9301BA9E800BCA01F /* launchctl_1_1.2.0_iphoneos-arm64.deb */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "launchctl_1_1.2.0_iphoneos-arm64.deb"; path = "../Packages/additional/launchctl_1_1.2.0_iphoneos-arm64.deb"; sourceTree = SOURCE_ROOT; };
 		8C609C992C19AC250023DD12 /* libkrw-dopamine.deb */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libkrw-dopamine.deb"; path = "../../../Packages/libkrw-provider/libkrw-dopamine.deb"; sourceTree = "<group>"; };
-		8C609C9C2C19AECF0023DD12 /* NSString+Version.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSString+Version.m"; sourceTree = "<group>"; };
-		8C609C9D2C19AEE70023DD12 /* NSString+Version.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSString+Version.h"; sourceTree = "<group>"; };
+		8C609C9C2C19AECF0023DD12 /* NSString+Version.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "../DopamineCore/Implementation/NSString+Version.m"; sourceTree = SOURCE_ROOT; };
+		8C609C9D2C19AEE70023DD12 /* NSString+Version.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/Implementation/NSString+Version.h"; sourceTree = SOURCE_ROOT; };
 		8C6599DA2C555A60000FF57F /* DOPSJetsamListItemsController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DOPSJetsamListItemsController.m; sourceTree = "<group>"; };
 		8C6599DC2C555A71000FF57F /* DOPSJetsamListItemsController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DOPSJetsamListItemsController.h; sourceTree = "<group>"; };
 		8C7198152ABF0E82003C6658 /* Dopamine.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Dopamine.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -689,15 +689,15 @@
 		8C71982A2ABF0E84003C6658 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		8C9E46272ACA1C8D00B5456A /* UIImage+Blur.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UIImage+Blur.h"; sourceTree = "<group>"; };
 		8C9E46282ACA1CC700B5456A /* UIImage+Blur.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "UIImage+Blur.m"; sourceTree = "<group>"; };
-		8CB4087C301FFB050097E18B /* clock_alarm.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = clock_alarm.c; sourceTree = "<group>"; };
-		8CB4087F301FFB220097E18B /* clock_alarm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = clock_alarm.h; sourceTree = "<group>"; };
+		8CB4087C301FFB050097E18B /* clock_alarm.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = "../DopamineCore/Implementation/clock_alarm.c"; sourceTree = SOURCE_ROOT; };
+		8CB4087F301FFB220097E18B /* clock_alarm.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/Implementation/clock_alarm.h"; sourceTree = SOURCE_ROOT; };
 		8CB408803020101D0097E18B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8CB94F022B59E17A0098BAFD /* basebin.tc */ = {isa = PBXFileReference; lastKnownFileType = file; name = basebin.tc; path = ../../../BaseBin/basebin.tc; sourceTree = "<group>"; };
 		8CB94F032B59E17A0098BAFD /* basebin.tar */ = {isa = PBXFileReference; lastKnownFileType = archive.tar; name = basebin.tar; path = ../../../BaseBin/basebin.tar; sourceTree = "<group>"; };
 		8CBF1A482EC3B71700EB2308 /* UIImage+JPEG2000.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "UIImage+JPEG2000.h"; sourceTree = "<group>"; };
 		8CBF1A492EC3B71700EB2308 /* UIImage+JPEG2000.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "UIImage+JPEG2000.m"; sourceTree = "<group>"; };
-		8CC139802B53DE6C00230143 /* NSData+Hex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSData+Hex.h"; sourceTree = "<group>"; };
-		8CC139812B53DE6C00230143 /* NSData+Hex.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSData+Hex.m"; sourceTree = "<group>"; };
+		8CC139802B53DE6C00230143 /* NSData+Hex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "../DopamineCore/Implementation/NSData+Hex.h"; sourceTree = SOURCE_ROOT; };
+		8CC139812B53DE6C00230143 /* NSData+Hex.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "../DopamineCore/Implementation/NSData+Hex.m"; sourceTree = SOURCE_ROOT; };
 		8CCD2FC32B77AA9200F9C5DA /* basebin-link.deb */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "basebin-link.deb"; path = "../../../Packages/basebin-link/basebin-link.deb"; sourceTree = "<group>"; };
 		8CCD8A832B6F165A004B72B0 /* libroot.deb */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libroot.deb; path = ../../../Packages/libroot/libroot.deb; sourceTree = "<group>"; };
 		8CDD07A72B4F619000A32B61 /* kfd.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = kfd.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -2551,9 +2551,10 @@
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../DopamineCore",
+					"$(SRCROOT)/../DopamineCore/Implementation",
 					"$(SRCROOT)/Dopamine/Jailbreak",
 					"$(SRCROOT)/Dopamine/Extensions",
-					"$(SRCROOT)/Dopamine/Headers",
+					"$(SRCROOT)/../DopamineCore/PrivateHeaders",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "-ObjC";
@@ -3213,9 +3214,10 @@
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../DopamineCore",
+					"$(SRCROOT)/../DopamineCore/Implementation",
 					"$(SRCROOT)/Dopamine/Jailbreak",
 					"$(SRCROOT)/Dopamine/Extensions",
-					"$(SRCROOT)/Dopamine/Headers",
+					"$(SRCROOT)/../DopamineCore/PrivateHeaders",
 					"$(SRCROOT)/Dopamine/CoreAdapter",
 					"$(SRCROOT)/Dopamine/UI",
 				);
@@ -3264,9 +3266,10 @@
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../DopamineCore",
+					"$(SRCROOT)/../DopamineCore/Implementation",
 					"$(SRCROOT)/Dopamine/Jailbreak",
 					"$(SRCROOT)/Dopamine/Extensions",
-					"$(SRCROOT)/Dopamine/Headers",
+					"$(SRCROOT)/../DopamineCore/PrivateHeaders",
 					"$(SRCROOT)/Dopamine/CoreAdapter",
 					"$(SRCROOT)/Dopamine/UI",
 				);
@@ -3449,9 +3452,10 @@
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(SRCROOT)/../DopamineCore",
+					"$(SRCROOT)/../DopamineCore/Implementation",
 					"$(SRCROOT)/Dopamine/Jailbreak",
 					"$(SRCROOT)/Dopamine/Extensions",
-					"$(SRCROOT)/Dopamine/Headers",
+					"$(SRCROOT)/../DopamineCore/PrivateHeaders",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "-ObjC";

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Build standalone tweak packages and the separate test app; never installs."""
+import sys
 import argparse
 import base64
 import hashlib
@@ -12,8 +13,10 @@ import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0,str(ROOT.parent/'RuntimeClient'))
+from build import configure
 OUT = ROOT / 'build'
-APP_BUILD = '2'
+APP_BUILD = '3'
 PROJECTS = [('LoadProbe', 'MMDLabLoad'), ('MethodProbe', 'MMDLabMethod'),
             ('UIProbe', 'MMDLabUI'), ('FileProbe', 'MMDLabFile'),
             ('NotificationProbe', 'MMDLabNotification')]
@@ -70,7 +73,7 @@ def build(simulator=False):
         'UIFileSharingEnabled': True, 'LSSupportsOpeningDocumentsInPlace': True}
     (app / 'Info.plist').write_bytes(plistlib.dumps(info))
     with (logs / (sdkname + '-app.log')).open('w') as log:
-        run(flags + [ROOT / 'App/main.m', '-o', app / 'PluginLab'], stdout=log, stderr=subprocess.STDOUT)
+        run(flags + configure(app) + [ROOT / 'App/main.m', '-o', app / 'PluginLab'], stdout=log, stderr=subprocess.STDOUT)
     if simulator:
         run(['codesign', '--force', '--sign', '-', app], capture_output=True)
     else:

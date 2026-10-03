@@ -29,3 +29,12 @@ Application/Payload
 Tools/fastPathSign/.build_*
 Exploits/kfd/kfd.framework/kfd
 .sign
+
+!DopamineCore/DopamineCore.xcodeproj/xcshareddata/
+DopamineCore/DopamineCore.xcodeproj/xcshareddata/**
+!DopamineCore/DopamineCore.xcodeproj/xcshareddata/xcschemes/
+!DopamineCore/DopamineCore.xcodeproj/xcshareddata/xcschemes/DopamineSDK.xcscheme
+!DopamineCore/DopamineCore.xcodeproj/project.xcworkspace/xcshareddata/
+DopamineCore/DopamineCore.xcodeproj/project.xcworkspace/xcshareddata/**
+!DopamineCore/DopamineCore.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+!DopamineCore/DopamineCore.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved

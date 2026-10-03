@@ -12,7 +12,8 @@
 #import <dlfcn.h>
 #import <pwd.h>
 #import <mach-o/loader.h>
-#import "JBInfo.h"
+#import "RuntimeClient.h"
+#import "LabSupport.h"
 extern char **environ;
 extern int posix_spawnattr_set_persona_np(posix_spawnattr_t *, uid_t, uint32_t);
 extern int posix_spawnattr_set_persona_uid_np(posix_spawnattr_t *, uid_t);
@@ -23,100 +24,33 @@ __attribute__((used, visibility("default"))) volatile uint32_t RLResearchValue =
 __attribute__((noinline, used, visibility("default"))) int RLResearchCalculate(int x) { return x * 2; }
 static NSString *const State = @"/var/jb/var/root/ResearchLab";
 static NSString *const Bin = @"/var/jb/usr/local/lib/ResearchLab";
-static void *JBLibrary;
-static int (*Trust)(const char *);
-static NSString *Hash(NSData *data) {
-    unsigned char h[32]; CC_SHA256(data.bytes, (CC_LONG)data.length, h);
-    NSMutableString *s=[NSMutableString string];for(int i=0;i<32;i++)[s appendFormat:@"%02x",h[i]];return s;
-}
-static void Log(NSString *phase, NSDictionary *value) {
-    NSData *d=[NSJSONSerialization dataWithJSONObject:value options:0 error:nil];
-    if(d.length>600) {
-        NSString *encoded=[d base64EncodedStringWithOptions:0],*identifier=NSUUID.UUID.UUIDString;
-        NSUInteger total=(encoded.length+599)/600;
-        for(NSUInteger i=0;i<total;i++) {
-            NSString *part=[encoded substringWithRange:NSMakeRange(i*600,MIN((NSUInteger)600,encoded.length-i*600))];
-            os_log_with_type(os_log_create("com.mmd.ResearchLab","Test"),OS_LOG_TYPE_DEFAULT,
-                "[RESEARCHLAB_CHUNK] %{public}s %{public}s %lu/%lu %{public}s",identifier.UTF8String,phase.UTF8String,(unsigned long)i,(unsigned long)total,part.UTF8String);
-        }
-        return;
-    }
-    os_log_with_type(os_log_create("com.mmd.ResearchLab","Test"),OS_LOG_TYPE_DEFAULT,
-        "[RESEARCHLAB] %{public}s %{public}s",phase.UTF8String,[[[NSString alloc]initWithData:d encoding:NSUTF8StringEncoding] UTF8String]);
-}
-static NSDictionary *Boot(void) {
-    NSMutableDictionary *v=[@{@"pid":@(getpid()),@"uid":@(getuid()),@"euid":@(geteuid())} mutableCopy];
-    char u[128]={0};size_t size=sizeof(u);if(!sysctlbyname("kern.bootsessionuuid",u,&size,NULL,0))v[@"boot_uuid"]=@(u);
-    int mib[]={CTL_KERN,KERN_PROC,KERN_PROC_ALL,0};size=0;
-    if(!sysctl(mib,4,NULL,&size,NULL,0)) {
-        size+=32*sizeof(struct kinfo_proc);struct kinfo_proc *ps=calloc(1,size);
-        if(ps && !sysctl(mib,4,ps,&size,NULL,0))for(size_t i=0;i<size/sizeof(*ps);i++)if(!strcmp(ps[i].kp_proc.p_comm,"SpringBoard")) {
-            struct timeval t=ps[i].kp_proc.p_starttime;v[@"springboard"]=@{@"pid":@(ps[i].kp_proc.p_pid),@"sec":@((long long)t.tv_sec),@"usec":@(t.tv_usec)};break;
-        }free(ps);
-    }return v;
-}
-static NSString *Tail(NSString *path) {
-    NSData *d=[NSData dataWithContentsOfFile:path];if(d.length>5000)d=[d subdataWithRange:NSMakeRange(d.length-5000,5000)];
-    return d?([[NSString alloc]initWithData:d encoding:NSUTF8StringEncoding]?:@"binary output"):@"";
-}
-static NSDictionary *Spawn(NSString *path,NSArray<NSString *> *args,BOOL root,BOOL background,NSString *logPath) {
-    NSMutableArray *all=[NSMutableArray arrayWithObject:path];[all addObjectsFromArray:args];
-    char **av=calloc(all.count+1,sizeof(char *));for(NSUInteger i=0;i<all.count;i++)av[i]=(char *)[all[i] UTF8String];
-    int fd=open(logPath.fileSystemRepresentation,O_CREAT|O_TRUNC|O_WRONLY,0600);
-    if(fd<0){free(av);return @{@"spawn_error":@(errno),@"ok":@NO};}
-    posix_spawn_file_actions_t actions;posix_spawn_file_actions_init(&actions);
-    posix_spawn_file_actions_addopen(&actions,STDIN_FILENO,"/dev/null",O_RDONLY,0);
-    posix_spawn_file_actions_adddup2(&actions,fd,STDOUT_FILENO);posix_spawn_file_actions_adddup2(&actions,fd,STDERR_FILENO);
-    if(fd>2)posix_spawn_file_actions_addclose(&actions,fd);
-    posix_spawnattr_t attr;posix_spawnattr_init(&attr);
-    if(root){posix_spawnattr_set_persona_np(&attr,99,1);posix_spawnattr_set_persona_uid_np(&attr,0);posix_spawnattr_set_persona_gid_np(&attr,0);}
-    if(background){posix_spawnattr_setflags(&attr,POSIX_SPAWN_SETPGROUP);posix_spawnattr_setpgroup(&attr,0);}
-    pid_t pid=0;int err=posix_spawn(&pid,path.fileSystemRepresentation,&actions,&attr,av,environ);
-    posix_spawn_file_actions_destroy(&actions);posix_spawnattr_destroy(&attr);close(fd);free(av);
-    if(err)return @{@"ok":@NO,@"spawn_error":@(err),@"error":@(strerror(err))};
-    if(background)return @{@"ok":@YES,@"pid":@(pid)};
-    int status=0;pid_t waited;BOOL timeout=NO;double deadline=NSProcessInfo.processInfo.systemUptime+45;
-    while((waited=waitpid(pid,&status,WNOHANG))==0 || (waited<0 && errno==EINTR)) {
-        if(NSProcessInfo.processInfo.systemUptime>deadline){timeout=YES;kill(pid,SIGKILL);while(waitpid(pid,&status,0)<0 && errno==EINTR){}break;}usleep(20000);
-    }
-    BOOL ok=!timeout && waited==pid && WIFEXITED(status) && WEXITSTATUS(status)==0;
-    return @{@"ok":@(ok),@"pid":@(pid),@"timed_out":@(timeout),@"wait_status":@(status),@"output":Tail(logPath)};
-}
-static BOOL Listening(int port) {
-    int fd=socket(AF_INET,SOCK_STREAM,0);struct sockaddr_in a={0};a.sin_family=AF_INET;a.sin_port=htons(port);a.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
-    BOOL ok=connect(fd,(struct sockaddr *)&a,sizeof(a))==0;close(fd);return ok;
-}
-static NSDictionary *Kernel(void) {
-    int (*initialize)(void)=dlsym(JBLibrary,"jbclient_initialize_primitives");
-    int (*readKernel)(uint64_t,void *,size_t)=dlsym(JBLibrary,"kreadbuf");
-    struct system_info *info=dlsym(JBLibrary,"gSystemInfo");
-    if(!initialize||!readKernel||!info)return @{@"passed":@NO,@"error":@"libjailbreak 接口缺失"};
-    int init=initialize();uint32_t magic=0;int read=-1;
-    if(init==0 && info->kernelConstant.base)read=readKernel(info->kernelConstant.base,&magic,sizeof(magic));
-    return @{@"passed":@(init==0 && read==0 && magic==MH_MAGIC_64),@"initialize_result":@(init),@"read_result":@(read),
-        @"kernel_base":[NSString stringWithFormat:@"0x%llx",info->kernelConstant.base],@"magic":[NSString stringWithFormat:@"0x%08x",magic],
-        @"bytes_read":@4,@"kernel_write_tested":@NO};
-}
+static int Trust(const char *path) { return [DORuntimeClient.sharedClient trustFile:@(path)]; }
+#define Hash LSHash
+#define Boot LSBoot
+#define Tail LSTail
+#define Spawn LSSpawn
+#define Listening LSListening
+static void Log(NSString *phase,NSDictionary *value) { LSLog(@"com.mmd.ResearchLab",@"RESEARCHLAB",phase,value); }
+static NSDictionary *Kernel(void) { return [DORuntimeClient.sharedClient readKernelHeader]; }
 static NSDictionary *Stop(void) {
     NSMutableArray *steps=[NSMutableArray array];
     NSDictionary *records=[NSDictionary dictionaryWithContentsOfFile:[State stringByAppendingPathComponent:@"services.plist"]];
     for(NSString *name in records) {
-        NSDictionary *r=records[name];pid_t pid=[r[@"pid"] intValue];char path[4096]={0},expected[4096]={0},actual[4096]={0};
-        BOOL exists=pid>1 && proc_pidpath(pid,path,sizeof(path))>0;
-        BOOL same=exists && realpath([r[@"path"] fileSystemRepresentation],expected) && realpath(path,actual) && !strcmp(actual,expected);
-        BOOL stopped=!exists || (same && kill(pid,SIGTERM)==0);
-        [steps addObject:@{@"service":name,@"pid":@(pid),@"same_executable":@(same),@"stopped":@(stopped)}];
+        NSDictionary *r=records[name];
+        NSMutableDictionary *step=[LSStopOwnedProcess(r) mutableCopy];step[@"service"]=name;step[@"pid"]=r[@"pid"]?:@0;
+        [steps addObject:step];
     }
-    return @{@"services":steps,@"ssh_listening":@(Listening(22222)),@"frida_listening":@(Listening(27042))};
+    BOOL stopped=YES;for(NSDictionary *step in steps)stopped &= [step[@"stopped"] boolValue];
+    return @{@"passed":@(stopped && !Listening(22222) && !Listening(27043)),@"services":steps,@"ssh_listening":@(Listening(22222)),@"frida_listening":@(Listening(27043))};
 }
 static NSDictionary *Prepare(void) {
     NSFileManager *fm=NSFileManager.defaultManager;NSError *error=nil;
-    NSMutableDictionary *report=[@{@"before":Boot(),@"root_identity":@{@"uid":@(getuid()),@"euid":@(geteuid()),@"passed":@(getuid()==0 && geteuid()==0)},@"client_tests":@"pending",@"kernel_write_tested":@NO} mutableCopy];
+    NSMutableDictionary *report=[@{@"run_id":NSUUID.UUID.UUIDString,@"before":Boot(),@"root_identity":@{@"uid":@(getuid()),@"euid":@(geteuid()),@"passed":@(getuid()==0 && geteuid()==0)},@"client_tests":@"pending",@"kernel_write_tested":@NO} mutableCopy];
     if(geteuid()!=0){report[@"error"]=@"辅助进程未获得 root";return report;}
     [fm createDirectoryAtPath:State withIntermediateDirectories:YES attributes:@{NSFilePosixPermissions:@0700} error:&error];
     chmod(State.fileSystemRepresentation,0700);
-    JBLibrary=dlopen("/var/jb/basebin/libjailbreak.dylib",RTLD_NOW|RTLD_LOCAL);Trust=JBLibrary?dlsym(JBLibrary,"jbclient_trust_file_by_path"):NULL;
-    if(!Trust){report[@"error"]=@"已有越狱服务客户端不可用";return report;}
+    report[@"runtime"]=DORuntimeClient.sharedClient.status;
+    if(![report[@"runtime"][@"available"] boolValue]){report[@"error"]=@"已有越狱服务客户端不可用";return report;}
     report[@"kernel_read"]=Kernel();Log(@"kernel",report[@"kernel_read"]);
     NSString *nonce=NSUUID.UUID.UUIDString;NSString *marker=[State stringByAppendingPathComponent:[@"root-" stringByAppendingString:nonce]];
     BOOL wrote=[nonce writeToFile:marker atomically:YES encoding:NSUTF8StringEncoding error:&error];chmod(marker.fileSystemRepresentation,0600);
@@ -173,13 +107,13 @@ static NSDictionary *Prepare(void) {
     report[@"sshd_config_check"]=Spawn(sshd,@[@"-t",@"-f",configPath],NO,NO,[State stringByAppendingPathComponent:@"sshd-check.log"]);
     NSMutableDictionary *services=[[NSDictionary dictionaryWithContentsOfFile:[State stringByAppendingPathComponent:@"services.plist"]] mutableCopy]?:[NSMutableDictionary dictionary];
     NSArray *specs=@[@{@"name":@"openssh",@"path":sshd,@"args":@[@"-D",@"-e",@"-f",configPath],@"port":@22222},
-        @{@"name":@"frida",@"path":@"/var/jb/usr/sbin/frida-server",@"args":@[@"-l",@"127.0.0.1:27042"],@"port":@27042}];
+        @{@"name":@"frida",@"path":@"/var/jb/usr/sbin/frida-server",@"args":@[@"-l",@"127.0.0.1:27043"],@"port":@27043}];
     for(NSDictionary *s in specs) {
         NSString *name=s[@"name"],*log=[State stringByAppendingPathComponent:[name stringByAppendingString:@".log"]];int port=[s[@"port"] intValue];
-        if(Listening(port)){report[name]=@{@"started":@NO,@"already_listening":@YES,@"client_test":@"pending"};continue;}
+        if(Listening(port)){report[name]=@{@"started":@NO,@"already_listening":@YES,@"error":@"测试端口已占用；先停止上次测试服务"};continue;}
         if([name isEqual:@"openssh"] && ![report[@"sshd_config_check"][@"ok"] boolValue])continue;
         NSDictionary *spawn=Spawn(s[@"path"],s[@"args"],NO,YES,log);pid_t pid=[spawn[@"pid"] intValue];
-        if(pid>1){services[name]=@{@"pid":@(pid),@"path":s[@"path"]};[services writeToFile:[State stringByAppendingPathComponent:@"services.plist"] atomically:YES];}
+        if(pid>1){NSMutableDictionary *identity=[LSProcessIdentity(pid) mutableCopy];identity[@"owned"]=@YES;identity[@"port"]=@(port);services[name]=identity;[services writeToFile:[State stringByAppendingPathComponent:@"services.plist"] atomically:YES];}
         BOOL listening=NO;for(int i=0;i<30;i++){if((listening=Listening(port)))break;usleep(100000);}
         int status=0;pid_t waited=pid>1?waitpid(pid,&status,WNOHANG):-1;
         report[name]=@{@"spawn":spawn,@"listening":@(listening),@"exited":@(waited==pid && pid>1),@"wait_status":@(status),@"log":Tail(log),@"client_test":@"pending"};
@@ -211,6 +145,17 @@ static NSDictionary *RunHelper(BOOL stop) {
     self.stop=[UIButton buttonWithType:UIButtonTypeSystem];[self.stop setTitle:@"停止本次测试服务" forState:0];[self.stop addTarget:self action:@selector(stopServices) forControlEvents:UIControlEventTouchUpInside];[stack addArrangedSubview:self.stop];
     UILabel *note=[UILabel new];note.numberOfLines=0;note.font=[UIFont systemFontOfSize:14];note.textColor=UIColor.secondaryLabelColor;note.text=@"服务仅监听手机本机地址，通过 USB 连接。SSH 使用专用密钥。服务准备后，电脑还会验证 SSH 登录和 Frida 附加；服务启动不等于功能测试通过。内核测试只读取 4 字节，不测试内核写入。";[stack addArrangedSubview:note];
     Log(@"launch",@{@"build":NSBundle.mainBundle.infoDictionary[@"CFBundleVersion"],@"boot":Boot()});
+    NSString *encoded=NSProcessInfo.processInfo.environment[@"RESEARCHLAB_HOST_RESULT"];
+    if(encoded) {
+        NSData *data=[[NSData alloc]initWithBase64EncodedString:encoded options:0];
+        id value=data?[NSJSONSerialization JSONObjectWithData:data options:0 error:nil]:nil;
+        BOOL accepted=[value isKindOfClass:NSDictionary.class] && LSValidateHostResult(value,LSReadReport(@"pending"),Boot()[@"boot_uuid"]);
+        if(accepted)LSSaveReport(@"host-result",value);
+        Log(@"host_result",@{@"accepted":@(accepted),@"result":accepted?value:@{}});
+    }
+    NSDictionary *result=LSReadReport(@"host-result");
+    if(LSValidateHostResult(result,LSReadReport(@"pending"),Boot()[@"boot_uuid"]))
+        self.result.text=[NSString stringWithFormat:@"SSH 登录与文件验证：%@\nFrida 附加与恢复：%@",[result[@"ssh_passed"] boolValue]?@"通过":@"未通过",[result[@"frida_passed"] boolValue]?@"通过":@"未通过"];
     NSString *mode=NSProcessInfo.processInfo.environment[@"RESEARCHLAB_MODE"];
     if([mode isEqual:@"run"])dispatch_after(dispatch_time(DISPATCH_TIME_NOW,NSEC_PER_SEC),dispatch_get_main_queue(),^{[self runTests];});
     if([mode isEqual:@"stop"])dispatch_after(dispatch_time(DISPATCH_TIME_NOW,NSEC_PER_SEC),dispatch_get_main_queue(),^{[self stopServices];});
@@ -221,7 +166,7 @@ static NSDictionary *RunHelper(BOOL stop) {
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{
         NSDictionary *report=RunHelper(stop);NSDictionary *after=Boot();
         BOOL same=before[@"boot_uuid"] && [before[@"boot_uuid"] isEqual:after[@"boot_uuid"]] && before[@"springboard"] && [before[@"springboard"] isEqual:after[@"springboard"]];
-        Log(stop?@"stop":@"prepare",report);Log(@"after",after);Log(@"continuity",@{@"same_kernel_and_springboard":@(same)});
+        LSSaveReport(stop?@"stop":@"pending",report);Log(stop?@"stop":@"prepare",report);Log(@"after",after);Log(@"continuity",@{@"same_kernel_and_springboard":@(same)});
         dispatch_async(dispatch_get_main_queue(),^{
             if(stop)self.result.text=@"已请求停止本次服务，请查看电脑核验结果。";
             else self.result.text=[NSString stringWithFormat:@"root 身份：%@\n内核读取：%@\nSSH 服务：%@\nFrida 服务：%@\n%@\n\nSSH 登录及 Frida 功能：等待电脑验证%@",

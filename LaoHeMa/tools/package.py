@@ -10,8 +10,7 @@ import struct
 import subprocess
 import zipfile
 from pathlib import Path
-from project import ROOT, upstream, components
-from runtime import resource_files
+from project import ROOT
 
 def verify_code(data):
     # CodeDirectory hashes are relative to each Mach-O slice.
@@ -60,22 +59,25 @@ def package():
     # A selector reference alone does not provide its Objective-C category implementation.
     symbols = subprocess.check_output(['nm', '--defined-only', str(binary)], text=True)
     assert re.search(r' [tT] -\[NSString\(Version\) numericalVersionRepresentation\]$', symbols, re.M), 'Missing bootstrap version-comparison implementation'
-    project = upstream(); expected = {v['name'] + '.framework' for v in components(project).values() if v['productType'] == 'com.apple.product-type.framework'}
+    sdk = ROOT / '.build/sdk/DopamineSDK'
+    manifest = json.loads((sdk / 'SDKManifest.json').read_text())
+    expected = set(manifest['exploit_metadata'])
     assert {p.name for p in (app / 'Frameworks').glob('*.framework')} == expected
     variants = 0; metadata = {}
     for name in sorted(expected):
         current = plistlib.loads((app / 'Frameworks' / name / 'Info.plist').read_bytes())
-        built = plistlib.loads((products / name / 'Info.plist').read_bytes())
+        built = plistlib.loads((sdk / 'Runtime/Frameworks' / name / 'Info.plist').read_bytes())
         fields = {k: v for k, v in current.items() if k.startswith('DP') or k == 'CFBundleIdentifier'}
         assert fields == {k: v for k, v in built.items() if k.startswith('DP') or k == 'CFBundleIdentifier'}
         variants += len(current.get('DPExploitFlavors', {})); metadata[name] = fields
     # Verify all non-code payloads before signing (code signatures can legitimately change).
-    for name, origin in resource_files(project).items(): assert (app / name).read_bytes() == origin.read_bytes(), name
+    for name, digest in manifest['source_resource_sha256'].items():
+        assert hashlib.sha256((app / name).read_bytes()).hexdigest() == digest, name
     ldid = os.environ.get('LDID', str(ROOT / '.build/tools/ldid/ldid'))
     for framework in sorted((app / 'Frameworks').glob('*.framework')):
         data = plistlib.loads((framework / 'Info.plist').read_bytes())
         subprocess.run([ldid, '-S', str(framework / data['CFBundleExecutable'])], check=True)
-    entitlements = ROOT / 'Application/Dopamine/Dopamine.entitlements'
+    entitlements = sdk / 'Host.entitlements'
     subprocess.run([ldid, '-S' + str(entitlements), str(binary)], check=True)
     subprocess.run([ldid, '-s', str(app)], check=True)
     assert plistlib.loads(subprocess.check_output([ldid, '-e', str(binary)])) == plistlib.loads(entitlements.read_bytes())

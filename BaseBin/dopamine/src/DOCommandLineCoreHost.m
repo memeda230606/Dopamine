@@ -1,9 +1,17 @@
 #import "DOCommandLineCoreHost.h"
-#import "DOPreferenceManager.h"
+@interface DOCommandLineCoreHost ()
+@property(nonatomic, copy) NSString *preferencesPath;
+@property(nonatomic, strong) NSMutableDictionary *preferences;
+@end
 @implementation DOCommandLineCoreHost
-+ (void)install { [DOPreferenceManager sharedManager]; [DOCoreContext installHost:[self new]]; }
-- (NSDictionary *)settingsSnapshot { return [[DOPreferenceManager sharedManager] settingsSnapshot]; }
-- (void)setSetting:(id)value forKey:(NSString *)key { [[DOPreferenceManager sharedManager] setPreferenceValue:value forKey:key]; }
++ (void)install {
+    DOCommandLineCoreHost *host=[self new];
+    host.preferencesPath=[NSHomeDirectory() stringByAppendingPathComponent:@"Library/Preferences/com.opa334.Dopamine.plist"];
+    host.preferences=[[NSDictionary dictionaryWithContentsOfFile:host.preferencesPath] mutableCopy] ?: [NSMutableDictionary new];
+    [DOCoreContext installHost:host];
+}
+- (NSDictionary *)settingsSnapshot { return self.preferences.copy; }
+- (void)setSetting:(id)value forKey:(NSString *)key { self.preferences[key]=value;[self.preferences writeToFile:self.preferencesPath atomically:YES]; }
 - (NSString *)resourceDirectory { return NSBundle.mainBundle.bundlePath; }
 - (NSString *)documentsDirectory { return [NSHomeDirectory() stringByAppendingPathComponent:@"Documents"]; }
 - (NSString *)applicationIdentifier { return @""; }

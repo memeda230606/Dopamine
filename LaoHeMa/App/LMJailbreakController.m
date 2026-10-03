@@ -1,13 +1,13 @@
 #import "LMJailbreakController.h"
 #import "LMCoreHost.h"
-#import "DOEnvironmentManager.h"
-#import "DOJailbreaker.h"
+#import "DOEngine.h"
+
 
 @interface LMJailbreakController ()
 @property(nonatomic, readwrite) LMState state;
 @property(nonatomic, copy, readwrite) NSString *message;
 @property(nonatomic, strong) LMCoreHost *host;
-@property(nonatomic, strong) DOJailbreaker *jailbreaker;
+@property(nonatomic, strong) DOEngine *jailbreaker;
 @end
 
 @implementation LMJailbreakController
@@ -16,8 +16,8 @@
         _host = host; _message = @"";
         NSString *error = host.resourceError;
         if (error) { _state = LMStateFailed; _message = error; }
-        else if ([DOEnvironmentManager sharedManager].isJailbroken || [DOEnvironmentManager sharedManager].isJailbrokenWithOtherJailbreak) _state = LMStateJailbroken;
-        else if (![DOEnvironmentManager sharedManager].isSupported) {
+        else if (DOEngine.isActive) _state = LMStateJailbroken;
+        else if (!DOEngine.isSupported) {
             _state = LMStateUnsupported; _message = @"当前设备或系统版本不受支持。";
         } else _state = LMStateReady;
     }
@@ -32,12 +32,12 @@
     NSAssert(NSThread.isMainThread, @"Start from the UI thread");
     if (self.state != LMStateReady) return;
     // Recheck immediately before execution; never run a second chain in an active environment.
-    if ([DOEnvironmentManager sharedManager].isJailbroken || [DOEnvironmentManager sharedManager].isJailbrokenWithOtherJailbreak) {
+    if (DOEngine.isActive) {
         [self setState:LMStateJailbroken message:@""]; return;
     }
     [self setState:LMStateRunning message:@"请保持 App 打开。"];
     [self.host startLogCapture];
-    self.jailbreaker = [DOJailbreaker new];
+    self.jailbreaker = [DOEngine new];
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         if ([self.jailbreaker contiguousMappingWorkaroundNeeded]) {
             dispatch_async(dispatch_get_main_queue(), ^{

@@ -2,7 +2,8 @@
 #import "LMCoreHost.h"
 #import "LMJailbreakController.h"
 #import "LMViewController.h"
-#import "DOEnvironmentManager.h"
+#import "DOEngine.h"
+#import "DOCommandLine.h"
 
 @interface LMAppDelegate : UIResponder <UIApplicationDelegate>
 @property(nonatomic, strong) UIWindow *window;
@@ -20,7 +21,9 @@
 int main(int argc, char *argv[]) {
     @autoreleasepool {
         LMCoreHost *host = [LMCoreHost install];
-        if ([DOEnvironmentManager sharedManager].isJailbroken) {
+        int status = 0;
+        if (DOHandleCommandLine(argc, (const char *const *)argv, &status)) return status;
+        if (DOEngine.isOwnedEnvironment) {
             setenv("PATH", "/sbin:/bin:/usr/sbin:/usr/bin:/var/jb/sbin:/var/jb/bin:/var/jb/usr/sbin:/var/jb/usr/bin", 1);
             setenv("TERM", "xterm-256color", 1);
         }

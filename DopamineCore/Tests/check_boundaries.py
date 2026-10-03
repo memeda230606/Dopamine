@@ -10,7 +10,7 @@ def sources(target):
  for phase in target['buildPhases']:
   phase=project[phase]
   if phase['isa']=='PBXSourcesBuildPhase':
-   for build in phase['files']:result.add(project[project[build]['fileRef']]['path'])
+   for build in phase['files']:result.add(Path(project[project[build]['fileRef']]['path']).name)
  return result
 core=sources(targets['DopamineCore']);app=sources(targets['Dopamine'])
 assert not core & app,core & app
@@ -22,7 +22,7 @@ undefined=subprocess.check_output(['nm','-u',str(a.library)],text=True)
 for symbol in ['DOUIManager','DOPreferenceManager','DOAppCoreHost','UIImage','UIApplication','UIView']:
  assert not re.search(r'_OBJC_(?:CLASS|METACLASS)_\$_'+symbol+r'\b',undefined),symbol
 for name in core:
- candidates=[root/'DopamineCore'/name,root/'Application/Dopamine/Jailbreak'/name,root/'Application/Dopamine/Extensions'/name]
+ candidates=[root/'DopamineCore'/name,root/'DopamineCore/Implementation'/name,root/'DopamineCore/Implementation'/name]
  file=next(x for x in candidates if x.exists())
  text=file.read_text()
  assert not re.search(r'#(?:import|include).*?(?:UIKit|DOUIManager|DOPreferenceManager|UIImage)',text),str(file)

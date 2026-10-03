@@ -3,6 +3,7 @@ set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 out="$repo/.build/laohema"
 mkdir -p "$out"
+"$repo/DopamineCore/build-sdk.sh"
 python3 "$repo/LaoHeMa/tools/project.py"
 xcodebuild -project "$repo/LaoHeMa/LaoHeMa.xcodeproj" -scheme LaoHeMa \
   -configuration Release -derivedDataPath "$out/DerivedData" \

@@ -1,4 +1,6 @@
 #import <UIKit/UIKit.h>
+#import "LabSupport.h"
+#import "RuntimeClient.h"
 #import <TargetConditionals.h>
 #import <CommonCrypto/CommonDigest.h>
 #import <os/log.h>
@@ -17,51 +19,13 @@ extern int posix_spawnattr_set_persona_gid_np(posix_spawnattr_t *, gid_t);
 static NSArray *PLNames(void) {
     return @[@"MMDLabLoad", @"MMDLabMethod", @"MMDLabUI", @"MMDLabFile", @"MMDLabNotification"];
 }
-static NSString *PLHash(NSData *data) {
-    unsigned char hash[CC_SHA256_DIGEST_LENGTH];
-    CC_SHA256(data.bytes, (CC_LONG)data.length, hash);
-    NSMutableString *s = [NSMutableString string];
-    for (unsigned int i = 0; i < sizeof(hash); i++) [s appendFormat:@"%02x", hash[i]];
-    return s;
-}
+#define PLHash LSHash
 static NSDictionary *PLManifest(void) {
     NSData *data = [NSData dataWithContentsOfURL:[NSBundle.mainBundle URLForResource:@"plugins" withExtension:@"json"]];
     return data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : @{};
 }
-static void PLLog(NSString *phase, NSDictionary *value) {
-    static os_log_t log;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{ log = os_log_create("com.mmd.PluginLab", "Test"); });
-    NSData *json = [NSJSONSerialization dataWithJSONObject:value options:NSJSONWritingSortedKeys error:nil];
-    NSString *text = [[NSString alloc] initWithData:json encoding:NSUTF8StringEncoding];
-    os_log_with_type(log, OS_LOG_TYPE_DEFAULT, "[PLUGINLAB] %{public}s %{public}s", phase.UTF8String, text.UTF8String);
-}
-static NSDictionary *PLBootSnapshot(void) {
-    NSMutableDictionary *v = [@{@"pid": @(getpid()), @"uid": @(getuid()), @"euid": @(geteuid())} mutableCopy];
-    char uuid[128] = {0}; size_t size = sizeof(uuid);
-    if (!sysctlbyname("kern.bootsessionuuid", uuid, &size, NULL, 0)) v[@"boot_uuid"] = @(uuid);
-    int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0}; size = 0;
-    if (!sysctl(mib, 4, NULL, &size, NULL, 0)) {
-        size += 32 * sizeof(struct kinfo_proc);
-        struct kinfo_proc *p = calloc(1, size);
-        if (p && !sysctl(mib, 4, p, &size, NULL, 0)) {
-            for (size_t i = 0; i < size / sizeof(*p); i++) {
-                if (!strcmp(p[i].kp_proc.p_comm, "SpringBoard")) {
-                    struct timeval t = p[i].kp_proc.p_starttime;
-                    v[@"springboard"] = @{@"pid": @(p[i].kp_proc.p_pid), @"sec": @((long long)t.tv_sec), @"usec": @(t.tv_usec)};
-                    break;
-                }
-            }
-        }
-        free(p);
-    }
-    return v;
-}
-static void *PLJailbreakLibrary(void) {
-    static void *library;
-    if (!library) library = dlopen("/var/jb/basebin/libjailbreak.dylib", RTLD_NOW | RTLD_LOCAL);
-    return library;
-}
+static void PLLog(NSString *phase,NSDictionary *value) { LSLog(@"com.mmd.PluginLab",@"PLUGINLAB",phase,value); }
+#define PLBootSnapshot LSBoot
 static NSString *PLPluginDirectory(void) {
 #if TARGET_OS_SIMULATOR
     return [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/StandalonePlugins"];
@@ -73,10 +37,7 @@ static NSDictionary *PLInstall(BOOL remove) {
     NSFileManager *fm = NSFileManager.defaultManager;
 #if !TARGET_OS_SIMULATOR
     if (geteuid() != 0) return @{@"ok": @NO, @"error": @"安装辅助进程未获得 root"};
-    void *library = PLJailbreakLibrary();
-    if (!library) return @{@"ok": @NO, @"error": @"无法载入现有越狱服务客户端"};
-    char *(*getRoot)(void) = dlsym(library, "jbclient_get_jbroot");
-    if (!getRoot || !getRoot()) return @{@"ok": @NO, @"error": @"越狱服务当前不可用"};
+    if(![DORuntimeClient.sharedClient.status[@"available"] boolValue])return @{@"ok":@NO,@"error":@"越狱服务不可用或 ABI 不匹配",@"runtime":DORuntimeClient.sharedClient.status};
 #endif
     NSDictionary *manifest = PLManifest();
     NSArray *plugins = manifest[@"plugins"];
@@ -114,8 +75,7 @@ static NSDictionary *PLInstall(BOOL remove) {
                  [filter writeToFile:filterPath options:NSDataWritingAtomic error:&error];
             if (ok) { chmod(path.fileSystemRepresentation, 0755); chmod(filterPath.fileSystemRepresentation, 0644); }
 #if !TARGET_OS_SIMULATOR
-            int (*trustFile)(const char *) = dlsym(PLJailbreakLibrary(), "jbclient_trust_file_by_path");
-            trust = ok && trustFile ? trustFile(path.fileSystemRepresentation) : -1;
+            trust = ok ? [DORuntimeClient.sharedClient trustFile:path] : -1;
             ok = ok && trust == 0;
 #endif
         }
@@ -129,37 +89,11 @@ static NSDictionary *PLRunInstaller(BOOL remove) {
 #if TARGET_OS_SIMULATOR
     return PLInstall(remove);
 #else
-    int fds[2]; if (pipe(fds)) return @{@"ok": @NO, @"pipe_errno": @(errno)};
-    posix_spawn_file_actions_t actions; posix_spawn_file_actions_init(&actions);
-    posix_spawn_file_actions_adddup2(&actions, fds[1], STDOUT_FILENO);
-    posix_spawn_file_actions_addclose(&actions, fds[0]);
-    posix_spawn_file_actions_addclose(&actions, fds[1]);
-    posix_spawnattr_t attr; posix_spawnattr_init(&attr);
-    posix_spawnattr_set_persona_np(&attr, 99, 1);
-    posix_spawnattr_set_persona_uid_np(&attr, 0);
-    posix_spawnattr_set_persona_gid_np(&attr, 0);
-    const char *binary = NSBundle.mainBundle.executablePath.fileSystemRepresentation;
-    char *argv[] = {(char *)binary, remove ? "--remove-lab-plugins" : "--install-lab-plugins", NULL};
-    pid_t pid = 0; int r = posix_spawn(&pid, binary, &actions, &attr, argv, environ);
-    posix_spawnattr_destroy(&attr); posix_spawn_file_actions_destroy(&actions); close(fds[1]);
-    if (r) { close(fds[0]); return @{@"ok": @NO, @"spawn_error": @(r)}; }
-    int status = 0; BOOL timedOut = NO; pid_t waited = 0;
-    NSTimeInterval deadline = NSProcessInfo.processInfo.systemUptime + 20;
-    do {
-        waited = waitpid(pid, &status, WNOHANG);
-        if (waited == pid || (waited < 0 && errno != EINTR)) break;
-        if (NSProcessInfo.processInfo.systemUptime >= deadline) {
-            timedOut = YES; kill(pid, SIGKILL);
-            while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
-            break;
-        }
-        usleep(20000);
-    } while (YES);
-    NSFileHandle *handle = [[NSFileHandle alloc] initWithFileDescriptor:fds[0] closeOnDealloc:YES];
-    NSData *data = [handle readDataToEndOfFile];
-    NSDictionary *result = data.length ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
-    if (timedOut || !result) return @{@"ok": @NO, @"timed_out": @(timedOut), @"wait_status": @(status)};
-    return result;
+    NSString *output=LSReportPath([@"helper-" stringByAppendingString:NSUUID.UUID.UUIDString]);
+    NSDictionary *spawn=LSSpawn(NSBundle.mainBundle.executablePath,@[remove?@"--remove-lab-plugins":@"--install-lab-plugins"],YES,NO,output);
+    NSData *data=[NSData dataWithContentsOfFile:output];
+    id result=data?[NSJSONSerialization JSONObjectWithData:data options:0 error:nil]:nil;
+    return [result isKindOfClass:NSDictionary.class]?result:@{@"ok":@NO,@"helper":spawn};
 #endif
 }
 
@@ -223,7 +157,7 @@ static NSMutableDictionary *PLRecords;
     UILabel *note = [self label:@"本实验使用 App 内定向加载。插件只作用于本 App；全局自动注入需要另行验证。文件测试仅使用本 App 的临时测试文件。" size:14]; note.textColor = UIColor.secondaryLabelColor; [stack addArrangedSubview:note];
     PLLog(@"launch", @{@"build": NSBundle.mainBundle.infoDictionary[@"CFBundleVersion"], @"boot": PLBootSnapshot(), @"preloaded_plugins": [PLResults all]});
     NSString *mode = NSProcessInfo.processInfo.environment[@"PLUGINLAB_MODE"];
-    if ([mode isEqual:@"run"]) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{ [self runTests]; });
+    if ([mode isEqual:@"run"] || [mode isEqual:@"automatic"]) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{ [self runTests]; });
     if ([mode isEqual:@"remove"]) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC), dispatch_get_main_queue(), ^{ [self removePlugins]; });
 }
 - (void)renderPluginSlot { self.pluginBadge.text = @"尚未加载 UI 插件"; }
@@ -236,6 +170,7 @@ static NSMutableDictionary *PLRecords;
 }
 - (void)runTests {
     if (self.didRun) return; self.didRun = YES; self.runButton.enabled = NO; self.removeButton.enabled = NO;
+    BOOL automatic=[NSProcessInfo.processInfo.environment[@"PLUGINLAB_MODE"] isEqual:@"automatic"];
     PLProbe *probe = [PLProbe new];
     NSDictionary *beforeBoot = PLBootSnapshot();
     [self renderPluginSlot];
@@ -243,11 +178,11 @@ static NSMutableDictionary *PLRecords;
         @"file": [probe fileProbe], @"ui_text": self.pluginBadge.text ?: @"", @"records": [PLResults all]};
     PLLog(@"baseline", baseline); self.statusLabel.text = @"正在准备独立插件并检查签名信任…";
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-        NSDictionary *installed = PLRunInstaller(NO); PLLog(@"install", installed);
+        NSDictionary *installed = automatic?@{@"ok":@YES,@"skipped_for_automatic_test":@YES}:PLRunInstaller(NO); PLLog(@"install", installed);
         dispatch_async(dispatch_get_main_queue(), ^{
             NSMutableArray *loads = [NSMutableArray array];
             void *loadHandle = NULL;
-            if ([installed[@"ok"] boolValue]) {
+            if (!automatic && [installed[@"ok"] boolValue]) {
                 for (NSString *name in PLNames()) {
                     NSString *path = [PLPluginDirectory() stringByAppendingPathComponent:[name stringByAppendingString:@".dylib"]];
                     dlerror(); void *h = dlopen(path.fileSystemRepresentation, RTLD_NOW | RTLD_GLOBAL); const char *error = dlerror();
@@ -263,6 +198,7 @@ static NSMutableDictionary *PLRecords;
             NSString *nonce = NSUUID.UUID.UUIDString;
             [NSNotificationCenter.defaultCenter postNotificationName:@"com.mmd.PluginLab.Ping" object:nil userInfo:@{@"nonce": nonce}];
             NSDictionary *records = [PLResults all];
+            if(automatic)loadHandle=RTLD_DEFAULT;
             int (*marker)(void) = loadHandle ? dlsym(loadHandle, "PLLoadProbeMarker") : NULL;
             NSArray *checks = @[
                 @{@"id": @"load", @"passed": @(marker && marker() == 20261002 && [records[@"load"][@"loaded"] boolValue])},
@@ -280,14 +216,11 @@ static NSMutableDictionary *PLRecords;
                 ((UILabel *)self.rows.arrangedSubviews[i]).text = [NSString stringWithFormat:@"%@  %@", passed ? @"✓" : @"✕", labels[i]];
                 PLLog(@"check", checks[i]);
             }
-            NSDictionary *summary = @{@"mode": @"explicit-app-scoped-dlopen", @"simulator": @(TARGET_OS_SIMULATOR), @"passed": @(count), @"total": @5, @"clean_baseline": @(baselineClean), @"same_kernel_and_springboard": @(noReboot), @"global_automatic_injection_verified": @NO};
+            NSDictionary *summary = @{@"mode": automatic?@"automatic-injection":@"explicit-app-scoped-dlopen", @"simulator": @(TARGET_OS_SIMULATOR), @"passed": @(count), @"total": @5, @"clean_baseline": @(baselineClean), @"same_kernel_and_springboard": @(noReboot), @"global_automatic_injection_verified": @(automatic && count==5), @"manual_dlopen_called":@(!automatic && loads.count>0)};
             PLLog(@"before_boot", beforeBoot); PLLog(@"after_boot", afterBoot); PLLog(@"summary", summary);
-            NSDictionary *report = @{@"summary": summary, @"baseline": baseline, @"install": installed, @"loads": loads, @"checks": checks, @"before_boot": beforeBoot, @"after_boot": afterBoot};
-            NSString *documents = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES).firstObject;
-            NSString *path = [documents stringByAppendingPathComponent:[NSString stringWithFormat:@"PluginLab-%@.json", NSUUID.UUID.UUIDString]];
-            NSData *json = [NSJSONSerialization dataWithJSONObject:report options:NSJSONWritingPrettyPrinted error:nil];
-            NSError *error = nil; BOOL saved = [json writeToFile:path options:NSDataWritingAtomic error:&error];
-            PLLog(@"report", @{@"saved": @(saved), @"path": path, @"error": error.localizedDescription ?: @""});
+            NSDictionary *report = @{@"run_id":NSUUID.UUID.UUIDString,@"summary": summary, @"baseline": baseline, @"install": installed, @"loads": loads, @"checks": checks, @"before_boot": beforeBoot, @"after_boot": afterBoot};
+            BOOL saved=LSSaveReport(@"latest",report);
+            PLLog(@"report",@{@"saved":@(saved),@"path":LSReportPath(@"latest")});
             self.statusLabel.text = [NSString stringWithFormat:@"%lu / 5 项通过\n%@\n%@", (unsigned long)count, noReboot ? @"系统和桌面均未重启" : @"重启状态需通过外部记录核对", baselineClean ? @"已对比插件加载前后的行为" : @"起始状态已有插件，需重新核对基线"];
             self.removeButton.enabled = YES;
         });
@@ -307,9 +240,10 @@ static NSMutableDictionary *PLRecords;
 int main(int argc, char **argv) {
     @autoreleasepool {
         if (argc == 2 && (!strcmp(argv[1], "--install-lab-plugins") || !strcmp(argv[1], "--remove-lab-plugins"))) {
+            int protocol=dup(STDOUT_FILENO);freopen("/dev/null","w",stdout);freopen("/dev/null","w",stderr);
             NSDictionary *result = PLInstall(!strcmp(argv[1], "--remove-lab-plugins"));
             NSData *data = [NSJSONSerialization dataWithJSONObject:result options:0 error:nil];
-            fwrite(data.bytes, 1, data.length, stdout); fflush(stdout); return [result[@"ok"] boolValue] ? 0 : 1;
+            write(protocol,data.bytes,data.length);close(protocol); return [result[@"ok"] boolValue] ? 0 : 1;
         }
         return UIApplicationMain(argc, argv, nil, NSStringFromClass(PLAppDelegate.class));
     }

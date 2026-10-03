@@ -55,11 +55,12 @@ def copy_runtime(destination, products):
         required += ['Frameworks/' + name + '/' + info['CFBundleExecutable'], 'Frameworks/' + name + '/Info.plist']
         frameworks[name] = {k: v for k, v in info.items() if k.startswith('DP') or k == 'CFBundleIdentifier'}
     manifests = {'required_files': sorted(required), 'source_resource_sha256': hashes, 'exploit_metadata': frameworks}
-    (destination / 'RuntimeManifest.plist').write_bytes(plistlib.dumps(manifests))
     # Keep UI version and runtime version separate: core migration compares the latter.
     app = next(o for o in project['objects'].values() if o.get('isa') == 'PBXNativeTarget' and o.get('name') == 'Dopamine')
     configs = project['objects'][app['buildConfigurationList']]['buildConfigurations']
     version = project['objects'][configs[0]]['buildSettings']['MARKETING_VERSION']
+    manifests['runtime_version'] = version
+    (destination / 'RuntimeManifest.plist').write_bytes(plistlib.dumps(manifests))
     # Licenses remain readable through iOS Settings; the App itself has only its main action.
     settings = destination / 'Settings.bundle'; settings.mkdir(exist_ok=True)
     notices = []

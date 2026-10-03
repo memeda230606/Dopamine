@@ -4,4 +4,6 @@
 @property BOOL isJailbroken;
 @property BOOL isJailbrokenWithOtherJailbreak;
 @property BOOL isSupported;
+@property BOOL isBootstrapped;
+@property BOOL isTweakInjectionEnabled;
 @end
